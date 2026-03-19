@@ -49,6 +49,8 @@ O projeto foi construído utilizando as seguintes stacks:
 ### **Ferramentas de Apoio**
 * **Git & GitHub** (Versionamento)
 * **VS Code** (IDE)
+* FIGMA (Design e Prototipação)
+* https://www.figma.com/design/06zXn2ejJpj2iUm1XXQWra/FIGMA---MESCLAINVEST?node-id=601-9&p=f&t=LRQ0OejGIRgPLq68-0
 
 ---
 
