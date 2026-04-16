@@ -37,21 +37,31 @@ O sistema permite a simulação de compra e venda de tokens que representam part
 O projeto foi construído utilizando as seguintes stacks:
 
 ### **Mobile (Frontend)**
-* **Flutter** 
-* **Dart** 
+* **Flutter**
+* **Dart**
 
 ### **Backend & Database**
-* **Node.js** 
-* **TypeScript / JavaScript** 
+* **Node.js**
+* **TypeScript / JavaScript**
 * **Firebase Firestore**  (Banco de Dados NoSQL)
-* **API REST** 
+* **API REST**
 
 ### **Ferramentas de Apoio**
 * **Git & GitHub** (Versionamento)
 * **VS Code** (IDE)
-* FIGMA (Design e Prototipação)
-* https://www.figma.com/design/06zXn2ejJpj2iUm1XXQWra/FIGMA---MESCLAINVEST?node-id=601-9&p=f&t=LRQ0OejGIRgPLq68-0
+* Figma (Design e Prototipação)
+
+---
+
+## 📂 Documentação
+
+| Artefato | Descrição | Link |
+| :--- | :--- | :--- |
+| Planilha de Startups | Base de dados simulada com 5 startups fictícias do ecossistema Mescla | [Ver planilha](https://docs.google.com/spreadsheets/d/1HGo9I57RYEkW_qFGg929zzWY_s66bnq_WRgcp-1RQho/edit?usp=sharing) |
+| Mapa Mental | Mapa mental do projeto MesclaInvest | [Ver mapa mental](https://www.figma.com/design/06zXn2ejJpj2iUm1XXQWra/FIGMA---MESCLAINVEST?node-id=846-404) |
+| Protótipo | Protótipo das telas no Figma | [Ver Protótipo](https://www.figma.com/design/06zXn2ejJpj2iUm1XXQWra/FIGMA---MESCLAINVEST?node-id=601-9&p=f&t=LRQ0OejGIRgPLq68-0) |
 
 ---
 
 Integrator Project 3 — Software Engineering — PUC-Campinas — 2026 Advisor: Prof. Me. Mateus Pereira Dias
+
