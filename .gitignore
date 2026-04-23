@@ -47,3 +47,9 @@ app.*.map.json
 #Nao subir credenciais do Firebase
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Node
+backend/node_modules/
+
+# Firebase (Chave das credenciais)
+backend/serviceAccountKey.json
