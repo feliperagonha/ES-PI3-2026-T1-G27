@@ -2,22 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/startup.dart';
 
-// ─────────────────────────────────────────────────────────────
-//  startup_detail_screen.dart
-//
-//  Como usar — em catalogo_startups_screen.dart, substitua o
-//  onTap do StartupCard por:
-//
-//    onTap: () {
-//      Navigator.push(
-//        context,
-//        MaterialPageRoute(
-//          builder: (_) => StartupDetailScreen(startup: startup),
-//        ),
-//      );
-//    },
-// ─────────────────────────────────────────────────────────────
-
 // Cores
 const _purple900 = Color(0xFF3A1C71);
 const _purple600 = Color(0xFF6A4CFF);
