@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/startup.dart';
 import '../repositories/startup_repository.dart';
 import '../widgets/startup_card.dart';
+import 'startup_detail_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -55,9 +56,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
               stream: _repository.getStartups(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (snapshot.hasError) {
@@ -82,13 +81,14 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
 
                     return StartupCard(
                       startup: startup,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Você clicou em ${startup.name}'),
-                          ),
-                        );
-                      },
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StartupDetailScreen(startup: startup),
+                              ),
+                            );
+                          },
                     );
                   },
                 );
