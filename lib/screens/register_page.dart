@@ -14,7 +14,6 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   // NOVA ALTERAÇÃO: Chave global para controlar o formulário e disparar os erros em vermelho
   final _formKey = GlobalKey<FormState>();
-
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final cpfController = TextEditingController();
