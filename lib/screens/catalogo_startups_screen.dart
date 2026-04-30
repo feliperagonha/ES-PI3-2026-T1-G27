@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/startup.dart';
 import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
+import 'startup_detail_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -147,13 +148,14 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
 
                     return StartupCard(
                       startup: startup,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Você clicou em ${startup.name}'),
-                          ),
-                        );
-                      },
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StartupDetailScreen(startup: startup),
+                              ),
+                            );
+                          },
                     );
                   },
                 );
