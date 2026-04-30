@@ -24,17 +24,52 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     'Em expansão',
   ];
 
+  bool _matchEstagio(String stageBanco, String filtroSelecionado) {
+    final stage = stageBanco.toLowerCase().trim();
+
+    switch (filtroSelecionado) {
+      case 'Nova':
+        return stage == 'nova' ||
+            stage == 'ideacao' ||
+            stage == 'ideação' ||
+            stage == 'ideia' ||
+            stage == 'seed' ||
+            stage == 'mvp';
+
+      case 'Em operação':
+        return stage == 'operacao' ||
+            stage == 'operação' ||
+            stage == 'ativa';
+
+      case 'Em expansão':
+        return stage == 'expansao' ||
+            stage == 'expansão' ||
+            stage == 'scaleup' ||
+            stage == 'scale-up' ||
+            stage == 'growth' ||
+            stage == 'crescimento' ||
+            stage == 'tracao' ||
+            stage == 'tração' ||
+            stage == 'serie a' ||
+            stage == 'series a';
+
+      default:
+        return true;
+    }
+  }
+
   // Função que aplica os dois filtros simultaneamente
   List<Startup> _filtrarStartups(List<Startup> startups) {
     return startups.where((startup) {
       final matchTexto =
           _filtroTexto.isEmpty ||
-          startup.name.toLowerCase().contains(_filtroTexto.toLowerCase()) ||
-          startup.sector.toLowerCase().contains(_filtroTexto.toLowerCase());
+              startup.name.toLowerCase().contains(_filtroTexto.toLowerCase()) ||
+              startup.sector.toLowerCase().contains(_filtroTexto.toLowerCase());
 
-      final matchEstagio =
-          _filtroEstagio == 'Todos' ||
-          startup.stage.toLowerCase() == _filtroEstagio.toLowerCase();
+      final matchEstagio = _matchEstagio(
+        startup.stage,
+        _filtroEstagio,
+      );
 
       return matchTexto && matchEstagio;
     }).toList();
