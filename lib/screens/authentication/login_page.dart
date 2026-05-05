@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'register_page.dart';
-import 'catalogo_startups_screen.dart';
+import '../catalogo_startups_screen.dart';
+import 'recuperar_senha_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -235,19 +236,26 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: resetPassword,
-                      child: const Text(
-                        'Esqueceu sua senha?',
-                        style: TextStyle(
-                          color: Color(0xFFB8A7FF),
-                          fontSize: 12,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RecuperarSenhaPage(),
                         ),
+                      );
+                    },
+                    child: const Text(
+                      'Esqueceu sua senha?',
+                      style: TextStyle(
+                        color: Color(0xFFB8A7FF),
+                        fontSize: 12,
                       ),
                     ),
                   ),
+                ),
 
                   const SizedBox(height: 6),
 

@@ -1,4 +1,5 @@
 import {setGlobalOptions} from "firebase-functions";
+export * from "./authentication";
 
 setGlobalOptions({ maxInstances: 10 });
 
