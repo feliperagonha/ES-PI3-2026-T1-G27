@@ -21,8 +21,9 @@
   },
   "functions": [
     {
-      "source": "functions",
+      "source": "backend",
       "codebase": "default",
+      "runtime": "nodejs24",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
         "node_modules",
