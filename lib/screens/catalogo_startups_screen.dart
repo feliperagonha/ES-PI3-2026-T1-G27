@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/startup.dart';
 import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
+import 'startup_detail_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -23,17 +24,52 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     'Em expansão',
   ];
 
+  bool _matchEstagio(String stageBanco, String filtroSelecionado) {
+    final stage = stageBanco.toLowerCase().trim();
+
+    switch (filtroSelecionado) {
+      case 'Nova':
+        return stage == 'nova' ||
+            stage == 'ideacao' ||
+            stage == 'ideação' ||
+            stage == 'ideia' ||
+            stage == 'seed' ||
+            stage == 'mvp';
+
+      case 'Em operação':
+        return stage == 'operacao' ||
+            stage == 'operação' ||
+            stage == 'ativa';
+
+      case 'Em expansão':
+        return stage == 'expansao' ||
+            stage == 'expansão' ||
+            stage == 'scaleup' ||
+            stage == 'scale-up' ||
+            stage == 'growth' ||
+            stage == 'crescimento' ||
+            stage == 'tracao' ||
+            stage == 'tração' ||
+            stage == 'serie a' ||
+            stage == 'series a';
+
+      default:
+        return true;
+    }
+  }
+
   // Função que aplica os dois filtros simultaneamente
   List<Startup> _filtrarStartups(List<Startup> startups) {
     return startups.where((startup) {
       final matchTexto =
           _filtroTexto.isEmpty ||
-          startup.name.toLowerCase().contains(_filtroTexto.toLowerCase()) ||
-          startup.sector.toLowerCase().contains(_filtroTexto.toLowerCase());
+              startup.name.toLowerCase().contains(_filtroTexto.toLowerCase()) ||
+              startup.sector.toLowerCase().contains(_filtroTexto.toLowerCase());
 
-      final matchEstagio =
-          _filtroEstagio == 'Todos' ||
-          startup.stage.toLowerCase() == _filtroEstagio.toLowerCase();
+      final matchEstagio = _matchEstagio(
+        startup.stage,
+        _filtroEstagio,
+      );
 
       return matchTexto && matchEstagio;
     }).toList();
@@ -147,13 +183,14 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
 
                     return StartupCard(
                       startup: startup,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Você clicou em ${startup.name}'),
-                          ),
-                        );
-                      },
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StartupDetailScreen(startup: startup),
+                              ),
+                            );
+                          },
                     );
                   },
                 );
