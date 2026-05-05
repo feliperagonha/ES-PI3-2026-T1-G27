@@ -1,6 +1,0 @@
-id_startup,nome_startup,descricao,estagio,setor,capital_aportado,tokens_emitidos,socios,participacao_societaria,mentores_conselho,video_demo,status
-1,EcoTech,Plataforma de monitoramento ambiental para empresas,operacao,cleantech,300000,100000,Ana Souza; Carlos Lima,60%; 40%,Mariana Prado,https://exemplo.com/demo/ecotech,ativa
-2,FinFlow,Solução de gestão financeira automatizada para pequenas empresas usando IA,seed,fintech,150000,50000,Lucas Ferreira; Beatriz Nunes,55%; 45%,Roberto Alves; Patrícia Costa,https://exemplo.com/demo/finflow,ativa
-3,MedSync,Aplicativo de telemedicina e gestão de prontuários eletrônicos integrados,mvp,healthtech,80000,30000,Juliana Ramos; Felipe Andrade,50%; 50%,Dr. Henrique Melo,https://exemplo.com/demo/medsync,ativa
-4,AgroIA,Plataforma de análise preditiva para otimização de colheitas no agronegócio,ideacao,agritech,20000,10000,Marcos Oliveira; Tatiane Campos,70%; 30%,Engª Cláudia Dias,https://exemplo.com/demo/agroia,em desenvolvimento
-5,EduLink,Marketplace de conexão entre professores independentes e alunos do ensino básico,seed,edtech,120000,40000,Amanda Torres; Ricardo Gomes; Priya Menon,40%; 35%; 25%,Sandra Lima; Paulo Rezende,https://exemplo.com/demo/edulink,ativa
