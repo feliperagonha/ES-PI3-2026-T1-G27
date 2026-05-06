@@ -136,7 +136,11 @@ class _RegisterPageState extends State<RegisterPage> {
             filled: true,
             fillColor: Colors.white,
             hintText: hint,
-            hintStyle: const TextStyle(fontSize: 12),
+            hintStyle: const TextStyle(
+              color: Color(0xFF9E9E9E),
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
             errorStyle: const TextStyle(
               color: Colors.orangeAccent,
             ), // Deixei laranja para destacar no fundo roxo
@@ -169,18 +173,22 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F1F1),
-      body: Center(
-        child: Container(
-          width: 320,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF3A1C71), Color(0xFF6A4CFF), Color(0xFF3A1C71)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF3A1C71),
+              Color(0xFF6A4CFF),
+              Color(0xFF3A1C71),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
+        ),
+        child: Center(
           child: SingleChildScrollView(
             // NOVA ALTERAÇÃO: Envolvemos a Column com o Form e passamos a nossa _formKey
             child: Form(

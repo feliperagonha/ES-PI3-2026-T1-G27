@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RecuperarSenhaPage extends StatefulWidget {
   const RecuperarSenhaPage({super.key});
@@ -20,26 +20,39 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
       return;
     }
 
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+
+    if (!emailRegex.hasMatch(email)) {
+      mostrarMensagem('Digite um e-mail válido.');
+      return;
+    }
+
     setState(() {
       carregando = true;
     });
 
     try {
-      final callable = FirebaseFunctions.instanceFor(
-        region: 'southamerica-east1',
-      ).httpsCallable('recuperarSenha');
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
-      final resultado = await callable.call({
-        'email': email,
-      });
+      mostrarMensagem(
+        'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.',
+      );
+    } on FirebaseAuthException catch (e) {
+      String mensagem = 'Erro ao recuperar senha.';
 
-      mostrarMensagem(resultado.data['message'] ?? 'E-mail enviado com sucesso.');
+      if (e.code == 'invalid-email') {
+        mensagem = 'E-mail inválido.';
+      }
+
+      mostrarMensagem(mensagem);
     } catch (e) {
-      mostrarMensagem('Erro ao recuperar senha. Verifique o e-mail informado.');
+      mostrarMensagem('Erro inesperado: $e');
     } finally {
-      setState(() {
-        carregando = false;
-      });
+      if (mounted) {
+        setState(() {
+          carregando = false;
+        });
+      }
     }
   }
 
@@ -57,114 +70,141 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
 
   @override
   Widget build(BuildContext context) {
-    const roxo = Color(0xFF28164D);
-    const fundo = Color(0xFFF5F1E8);
+    const corLogo = Color(0xFF7C4DFF);
 
     return Scaffold(
-      backgroundColor: fundo,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Row(
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF3A1C71),
+              Color(0xFF6A4CFF),
+              Color(0xFF3A1C71),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                  const Text(
+                    'MESCLA\nINVEST',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: corLogo,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      height: 0.9,
+                    ),
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
-              const Text(
-                'MESCLA INVEST',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: roxo,
-                ),
-              ),
+                  const Text(
+                    'Recuperar Senha',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
 
-              const SizedBox(height: 60),
+                  const SizedBox(height: 32),
 
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: roxo,
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Recuperar Senha',
-                      textAlign: TextAlign.center,
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Email',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 6),
 
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        hintText: 'E-mail',
-                        filled: true,
-                        fillColor: Colors.white,
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'Entre com seu email',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF9E9E9E),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide.none,
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                    ElevatedButton(
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
                       onPressed: carregando ? null : recuperarSenha,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: roxo,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: const Color(0xFF6A4CFF),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                       child: carregando
-                          ? const CircularProgressIndicator()
-                          : const Text(
-                        'Enviar',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'Voltar',
+                      )
+                          : const Text(
+                        'ENVIAR',
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'Voltar',
+                      style: TextStyle(
+                        color: Color(0xFFB8A7FF),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

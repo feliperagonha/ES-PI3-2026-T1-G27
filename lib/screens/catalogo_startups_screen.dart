@@ -3,6 +3,7 @@ import '../models/startup.dart';
 import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
 import 'startup_detail_screen.dart';
+import 'profile_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -79,13 +80,29 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F1),
+
       appBar: AppBar(
         title: const Text('Catálogo de Startups'),
         centerTitle: true,
         backgroundColor: const Color(0xFF3A1C71),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            tooltip: 'Perfil',
+            onPressed: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
+
       body: Column(
         children: [
           // Campo de busca por texto
