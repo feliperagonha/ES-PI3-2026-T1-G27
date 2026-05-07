@@ -55,6 +55,12 @@ backend/node_modules/
 backend/serviceAccountKey.json
 
 # Pastas de IDEs e Agentes de IA
+.cortex/
+.crush/
+.devin/
+.factory/
+.forge/
+.goose/
 .iflow/
 .junie/
 .kilocode/
