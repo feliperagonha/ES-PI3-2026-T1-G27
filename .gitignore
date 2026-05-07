@@ -55,6 +55,18 @@ backend/node_modules/
 backend/serviceAccountKey.json
 
 # Pastas de IDEs e Agentes de IA
+.adal/
+.agents/
+.aider-desk/
+.augment/
+.bob/
+.claude/
+.codeartsdoer/
+.codebuddy/
+.codemaker/
+.codestudio/
+.commandcode/
+.continue/
 .cortex/
 .crush/
 .devin/
