@@ -53,3 +53,26 @@ backend/node_modules/
 
 # Firebase (Chave das credenciais)
 backend/serviceAccountKey.json
+
+# Pastas de IDEs e Agentes de IA
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.rovodev/
+.tabnine/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+.cursor/
