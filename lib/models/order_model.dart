@@ -1,6 +1,8 @@
 //Arthur Sebastian Guarniz de Castro
 //24795528
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class OrderModel {
   final String id;
   final String userId;
@@ -32,8 +34,10 @@ class OrderModel {
       quantity: json['quantity'] ?? 0,
       price: (json['price'] ?? 0).toDouble(),
       status: json['status'] ?? 'open',
-      //Verifica se a data existe antes de converter do Firestore Timestamp
-      createdAt: json['createdAt'] != null ? json['createdAt'].toDate() : null,
+      //Verifica se a data existe e avisa que é um Timestamp do Firestore
+      createdAt: json['createdAt'] != null
+          ? (json['createdAt'] as Timestamp).toDate()
+          : null,
     );
   }
 

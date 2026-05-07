@@ -1,13 +1,14 @@
 //Arthur Sebastian Guarniz de Castro
 //24795528
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TransactionModel {
   final String id;
   final String userId;
   final double
   amount; //Valor da transação (positivo para depósito, negativo para saque/compra)
-  final String
-  description; //Ex: "Depósito via Pix", "Compra de cotas da Startup X"
+  final String description; // Ex:"Depósito via Pix"
   final DateTime? date;
 
   TransactionModel({
@@ -27,7 +28,8 @@ class TransactionModel {
       userId: json['userId'] ?? '',
       amount: (json['amount'] ?? 0).toDouble(),
       description: json['description'] ?? '',
-      date: json['date'] != null ? json['date'].toDate() : null,
+      //Usa o 'as Timestamp' para o Flutter entender de onde vem o .toDate()
+      date: json['date'] != null ? (json['date'] as Timestamp).toDate() : null,
     );
   }
 
