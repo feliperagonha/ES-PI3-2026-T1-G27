@@ -6,7 +6,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-export const recuperarSenha = onCall(
+export const recoveryPassword = onCall(
   {region: "southamerica-east1"},
   async (request) => {
     const email = request.data?.email;

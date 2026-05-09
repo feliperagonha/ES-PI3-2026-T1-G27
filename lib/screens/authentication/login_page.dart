@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+
 import 'register_page.dart';
 import '../catalogo_startups_screen.dart';
 import 'recuperar_senha_page.dart';
@@ -12,7 +14,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // NOVA ALTERAÇÃO: Chave global para validar o formulário de login
   final _formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController();
@@ -20,8 +21,6 @@ class _LoginPageState extends State<LoginPage> {
 
   bool obscure = true;
   bool loading = false;
-
-  final auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -31,7 +30,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
-    // NOVA ALTERAÇÃO: Validação integrada dos campos
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -39,10 +37,18 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => loading = true);
 
     try {
-      await auth.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'southamerica-east1',
+      ).httpsCallable('loginUser');
+
+      final result = await callable.call({
+        'email': emailController.text.trim(),
+        'password': passwordController.text.trim(),
+      });
+
+      final token = result.data['token'] as String;
+
+      await FirebaseAuth.instance.signInWithCustomToken(token);
 
       if (!mounted) return;
 
@@ -50,66 +56,27 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute(builder: (_) => const CatalogoStartupsScreen()),
       );
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseFunctionsException catch (e) {
       String mensagem = 'Erro ao fazer login.';
 
-      if (e.code == 'user-not-found') {
-        mensagem = 'Usuário não encontrado.';
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        mensagem = 'Email ou senha inválidos.';
-      } else if (e.code == 'invalid-email') {
-        mensagem = 'Email inválido.';
+      if (e.code == 'unauthenticated') {
+        mensagem = 'E-mail ou senha inválidos.';
+      } else if (e.code == 'invalid-argument') {
+        mensagem = e.message ?? 'Dados inválidos.';
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(mensagem)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensagem)),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro inesperado: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro inesperado: $e')),
+      );
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
-  Future<void> resetPassword() async {
-    final email = emailController.text.trim();
-
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Digite seu email no campo acima para recuperar a senha.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    try {
-      await auth.sendPasswordResetEmail(email: email);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email de recuperação enviado com sucesso.'),
-        ),
-      );
-    } on FirebaseAuthException catch (e) {
-      String mensagem = 'Não foi possível enviar o email de recuperação.';
-
-      if (e.code == 'invalid-email') {
-        mensagem = 'Email inválido.';
-      } else if (e.code == 'user-not-found') {
-        mensagem = 'Usuário não encontrado.';
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(mensagem)));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

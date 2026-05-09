@@ -1,5 +1,7 @@
-import {setGlobalOptions} from "firebase-functions";
-export * from "./authentication";
+//Juliano Perusso
+//RA: 24023434
+
+import {setGlobalOptions} from "firebase-functions/v2/options";
 
 setGlobalOptions({ maxInstances: 10 });
 
