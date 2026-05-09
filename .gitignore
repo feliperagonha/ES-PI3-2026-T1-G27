@@ -83,7 +83,7 @@ functions/node_modules/
 functions/lib/
 functions/.env
 
-#backend antigo
+# Backend antigo
 backend/node_modules/
 backend/serviceAccountKey.json
 
@@ -93,11 +93,45 @@ backend/serviceAccountKey.json
 .agents/
 skills/
 skills-lock.json
+
+.adal/
+.aider-desk/
+.augment/
+.bob/
+.claude/
+.codeartsdoer/
+.codebuddy/
+.codemaker/
+.codestudio/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.devin/
+.factory/
+.forge/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.rovodev/
 .tabnine/
 .trae/
 .vibe/
 .windsurf/
 .zencoder/
+.cursor/
 
 # ==============================
 # DEVTOOLS LOCAL
