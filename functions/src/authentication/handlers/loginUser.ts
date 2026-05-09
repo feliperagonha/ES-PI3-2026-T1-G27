@@ -11,7 +11,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-export const loginUsuario = onCall(
+export const loginUser = onCall(
   {region: "southamerica-east1"},
   async (request): Promise<LoginResponseData> => {
     let email: string;

@@ -11,13 +11,12 @@ import {PlaceOrderResponse} from "../types";
 
 export const placeOrder = onCall(
   {region: "southamerica-east1"},
-  async (request) => {
+  async (request): Promise<PlaceOrderResponse> => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Logue para operar.");
     }
 
     const order = validatePlaceOrderData(request.data);
-
     const orderId = await createOrder(request.auth.uid, order);
 
     return {

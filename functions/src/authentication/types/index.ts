@@ -21,3 +21,18 @@ export type AuthenticatedUser = {
   uid: string;
   email?: string;
 };
+
+// Cadastro de usuário
+export type RegisterUserData = {
+  name: string;
+  email: string;
+  password: string;
+  cpf?: string;
+  phone?: string;
+};
+
+export type RegisterUserResponse = {
+  success: boolean;
+  uid: string;
+  message: string;
+};

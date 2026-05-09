@@ -1,3 +1,5 @@
+import {RegisterUserData} from "../types";
+
 export function normalizeString(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -50,5 +52,47 @@ export function validateLoginData(data: unknown): {
   return {
     email,
     password,
+  };
+}
+
+export function validateRegisterUserData(data: unknown): RegisterUserData {
+  if (!data || typeof data !== "object") {
+    throw new Error("Dados de cadastro inválidos.");
+  }
+
+  const payload = data as Record<string, unknown>;
+
+  const name = normalizeString(payload.name);
+  const email = normalizeString(payload.email);
+  const password = normalizeString(payload.password);
+  const cpf = normalizeString(payload.cpf);
+  const phone = normalizeString(payload.phone);
+
+  if (!name) {
+    throw new Error("Nome obrigatório.");
+  }
+
+  if (!email) {
+    throw new Error("E-mail obrigatório.");
+  }
+
+  if (!isValidEmail(email)) {
+    throw new Error("E-mail inválido.");
+  }
+
+  if (!password) {
+    throw new Error("Senha obrigatória.");
+  }
+
+  if (!isValidPassword(password)) {
+    throw new Error("A senha deve ter pelo menos 6 caracteres.");
+  }
+
+  return {
+    name,
+    email,
+    password,
+    cpf,
+    phone,
   };
 }
