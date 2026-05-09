@@ -1,9 +1,12 @@
-# Miscellaneous
+# ==============================
+# MISC
+# ==============================
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
@@ -12,44 +15,91 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# ==============================
+# IDE / EDITOR
+# ==============================
 *.iml
 *.ipr
 *.iws
 .idea/
+.vscode/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
+# ==============================
+# FLUTTER / DART / PUB
+# ==============================
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
+build/
 /build/
+coverage/
 /coverage/
 
-# Symbolication related
+# Symbolication
 app.*.symbols
 
-# Obfuscation related
+# Obfuscation
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ==============================
+# ANDROID
+# ==============================
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
 
-#Nao subir credenciais do Firebase
+# Keystore / assinatura
+key.properties
+**/*.keystore
+**/*.jks
+
+# ==============================
+# iOS
+# ==============================
+ios/Pods/
+ios/.symlinks/
+
+# ==============================
+# FIREBASE
+# ==============================
+.firebase/
+.firebaserc.local
+
+# Credenciais Firebase - não subir
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 
-# Node
-backend/node_modules/
+# ==============================
+# FIREBASE FUNCTIONS / NODE
+# ==============================
+functions/node_modules/
+functions/lib/
+functions/.env
 
-# Firebase (Chave das credenciais)
+#backend antigo
+backend/node_modules/
 backend/serviceAccountKey.json
+
+# ==============================
+# FERRAMENTAS / AGENTES DE IA
+# ==============================
+.agents/
+skills/
+skills-lock.json
+.tabnine/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+
+# ==============================
+# DEVTOOLS LOCAL
+# ==============================
+devtools_options.yaml
