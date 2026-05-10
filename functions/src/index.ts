@@ -8,3 +8,5 @@ setGlobalOptions({maxInstances: 10});
 export * from "./authentication";
 export * from "./exchange";
 export * from "./wallet";
+export * from "./mercado";
+export * from "./profile";

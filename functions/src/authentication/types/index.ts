@@ -7,6 +7,8 @@ export type LoginResponseData = {
   success: boolean;
   token: string;
   message: string;
+  requiresTwoFactor?: boolean; 
+  uid?: string;                
 };
 
 export type FirebaseSignInResponse = {

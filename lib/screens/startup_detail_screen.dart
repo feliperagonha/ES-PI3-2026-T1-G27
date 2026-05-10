@@ -1,3 +1,6 @@
+// Felipe Ragonha
+// RA: 24023900
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/startup.dart';
@@ -133,7 +136,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           ),
           child: Stack(
             children: [
-              // Círculo decorativo (igual ao padrão visual do projeto)
+              // Círculo decorativo
               Positioned(
                 right: -50,
                 top: -50,
@@ -470,7 +473,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
     return Column(
       children: [
-        // Gráfico de pizza (se founders tiverem percentual)
+        // Gráfico de pizza
         if (_foundersHavePercentage()) ...[
           _Card(
             child: Column(
@@ -701,7 +704,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       child: ElevatedButton(
         onPressed: s.isActive && s.tokensAvailable > 0
             ? () {
-          // TODO: navegar para tela de investimento
+          // FAZER: navegar para tela de investimento
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:

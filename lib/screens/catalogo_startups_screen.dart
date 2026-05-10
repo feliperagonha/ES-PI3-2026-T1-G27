@@ -1,9 +1,13 @@
+// Felipe Ragonha E Juliano Perusso
+// RA: 24023900 e 24023434
+
 import 'package:flutter/material.dart';
 import '../models/startup.dart';
 import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
 import 'startup_detail_screen.dart';
 import 'profile_screen.dart';
+import 'mercado_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -81,27 +85,37 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F1),
 
-      appBar: AppBar(
-        title: const Text('Catálogo de Startups'),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF3A1C71),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            tooltip: 'Perfil',
-            onPressed: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+    appBar: AppBar(
+      title: const Text('Catálogo de Startups'),
+      centerTitle: true,
+      backgroundColor: const Color(0xFF3A1C71),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.storefront_outlined),
+          tooltip: 'Balcão de Tokens',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MercadoScreen()),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.person),
+          tooltip: 'Perfil',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ProfileScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
 
       body: Column(
         children: [

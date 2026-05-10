@@ -1,6 +1,5 @@
 // Guilherme Marras - 24027681
-// Juliano Perusso  - 
-
+// Juliano Perusso  - 24023434
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -8,6 +7,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'register_page.dart';
 import '../catalogo_startups_screen.dart';
 import 'recuperar_senha_page.dart';
+import '../two_factor_login_screen.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,7 +18,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -33,9 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
 
@@ -49,22 +46,35 @@ class _LoginPageState extends State<LoginPage> {
         'password': passwordController.text.trim(),
       });
 
-      final token = result.data['token'] as String;
-
-      await FirebaseAuth.instance.signInWithCustomToken(token);
+      final data = result.data as Map<String, dynamic>;
+      final requiresTwoFactor = data['requiresTwoFactor'] == true;
 
       if (!mounted) return;
 
+      if (requiresTwoFactor) {
+        // Usuário tem 2FA — vai para tela de verificação do código
+        final uid = data['uid'] as String;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TwoFactorLoginScreen(uid: uid),
+          ),
+        );
+        return;
+      }
+
+      // Sem 2FA — loga direto com o token
+      final token = data['token'] as String;
+      await FirebaseAuth.instance.signInWithCustomToken(token);
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const CatalogoStartupsScreen()),
       );
     } on FirebaseFunctionsException catch (e) {
-      final mensagem =
-          'Erro da Function: ${e.code} - ${e.message ?? 'sem mensagem'}';
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagem)),
+        SnackBar(content: Text('Erro: ${e.message ?? e.code}')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +85,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,23 +92,22 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF3A1C71), Color(0xFF6A4CFF), Color(0xFF3A1C71)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF3A1C71), Color(0xFF6A4CFF), Color(0xFF3A1C71)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          child: Center(
-              child: SingleChildScrollView(
-              // NOVA ALTERAÇÃO: Formulário envolvendo os campos
-              child: Form(
-                key: _formKey,
-                child:SizedBox(
-                  width:320,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: SizedBox(
+                width: 320,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
                       'MESCLA\nINVEST',
@@ -115,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                     const Text(
                       'Login',
                       style: TextStyle(
-                        color: Colors.white, // Ajustado para branco
+                        color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
@@ -124,14 +132,10 @@ class _LoginPageState extends State<LoginPage> {
 
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Email',
-                        style: TextStyle(color: Colors.white, fontSize: 13),
-                      ),
+                      child: Text('Email',
+                          style: TextStyle(color: Colors.white, fontSize: 13)),
                     ),
                     const SizedBox(height: 6),
-
-                    // NOVA ALTERAÇÃO: TextFormField para o Email
                     TextFormField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -147,14 +151,11 @@ class _LoginPageState extends State<LoginPage> {
                         fillColor: Colors.white,
                         hintText: 'Entre com seu email',
                         hintStyle: const TextStyle(
-                          color: Color(0xFF9E9E9E),
-                          fontSize: 12,
-                        ),
-                        errorStyle: const TextStyle(color: Colors.orangeAccent),
+                            color: Color(0xFF9E9E9E), fontSize: 12),
+                        errorStyle:
+                            const TextStyle(color: Colors.orangeAccent),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
+                            horizontal: 12, vertical: 14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
                           borderSide: BorderSide.none,
@@ -166,14 +167,10 @@ class _LoginPageState extends State<LoginPage> {
 
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Senha',
-                        style: TextStyle(color: Colors.white, fontSize: 13),
-                      ),
+                      child: Text('Senha',
+                          style: TextStyle(color: Colors.white, fontSize: 13)),
                     ),
                     const SizedBox(height: 6),
-
-                    // NOVA ALTERAÇÃO: TextFormField para a Senha
                     TextFormField(
                       controller: passwordController,
                       obscureText: obscure,
@@ -187,14 +184,11 @@ class _LoginPageState extends State<LoginPage> {
                         fillColor: Colors.white,
                         hintText: 'Entre com sua senha',
                         hintStyle: const TextStyle(
-                          color: Color(0xFF9E9E9E),
-                          fontSize: 12,
-                        ),
-                        errorStyle: const TextStyle(color: Colors.orangeAccent),
+                            color: Color(0xFF9E9E9E), fontSize: 12),
+                        errorStyle:
+                            const TextStyle(color: Colors.orangeAccent),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
+                            horizontal: 12, vertical: 14),
                         suffixIcon: IconButton(
                           icon: Icon(
                             obscure
@@ -202,7 +196,8 @@ class _LoginPageState extends State<LoginPage> {
                                 : Icons.visibility_off_outlined,
                             size: 20,
                           ),
-                          onPressed: () => setState(() => obscure = !obscure),
+                          onPressed: () =>
+                              setState(() => obscure = !obscure),
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
@@ -211,26 +206,22 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const RecuperarSenhaPage(),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        'Esqueceu sua senha?',
-                        style: TextStyle(
-                          color: Color(0xFFB8A7FF),
-                          fontSize: 12,
+                        ),
+                        child: const Text(
+                          'Esqueceu sua senha?',
+                          style: TextStyle(
+                              color: Color(0xFFB8A7FF), fontSize: 12),
                         ),
                       ),
                     ),
-                  ),
 
                     const SizedBox(height: 6),
 
@@ -250,14 +241,10 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 22,
                                 height: 22,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                                    strokeWidth: 2, color: Colors.white),
                               )
-                            : const Text(
-                                'PRÓXIMO',
-                                style: TextStyle(color: Colors.white),
-                              ),
+                            : const Text('PRÓXIMO',
+                                style: TextStyle(color: Colors.white)),
                       ),
                     ),
 
@@ -268,10 +255,8 @@ class _LoginPageState extends State<LoginPage> {
                         Expanded(child: Divider(color: Colors.white38)),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            'Ou',
-                            style: TextStyle(color: Colors.white70),
-                          ),
+                          child: Text('Ou',
+                              style: TextStyle(color: Colors.white70)),
                         ),
                         Expanded(child: Divider(color: Colors.white38)),
                       ],
@@ -280,26 +265,23 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 10),
 
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const RegisterPage()),
-                        );
-                      },
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterPage()),
+                      ),
                       child: const Text(
                         'Criar uma conta agora',
-                        style: TextStyle(
-                          color: Colors.white,
-                          ), // Ajustado para dar contraste no fundo
-                        ),
+                        style: TextStyle(color: Colors.white),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        )
-      );
-    }
+        ),
+      ),
+    );
   }
+}
