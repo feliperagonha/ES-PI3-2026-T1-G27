@@ -57,13 +57,8 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (_) => const CatalogoStartupsScreen()),
       );
     } on FirebaseFunctionsException catch (e) {
-      String mensagem = 'Erro ao fazer login.';
-
-      if (e.code == 'unauthenticated') {
-        mensagem = 'E-mail ou senha inválidos.';
-      } else if (e.code == 'invalid-argument') {
-        mensagem = e.message ?? 'Dados inválidos.';
-      }
+      final mensagem =
+          'Erro da Function: ${e.code} - ${e.message ?? 'sem mensagem'}';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(mensagem)),

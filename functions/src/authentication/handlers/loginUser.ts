@@ -29,10 +29,10 @@ export const loginUser = onCall(
       );
     }
 
-    const apiKey = process.env.FIREBASE_WEB_API_KEY;
+    const apiKey = process.env.AUTH_WEB_API_KEY;
 
     if (!apiKey) {
-      logger.error("FIREBASE_WEB_API_KEY não configurada.");
+      logger.error("AUTH_WEB_API_KEY não configurada.");
 
       throw new HttpsError(
         "failed-precondition",

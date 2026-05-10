@@ -1,8 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/services.dart'; // Necessário para aceitar formatadores (máscaras) no campo
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart'; // O pacote que acabamos de instalar
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -37,8 +36,6 @@ class _RegisterPageState extends State<RegisterPage> {
   bool obscureConfirmPassword = true;
   bool loading = false;
 
-  final auth = FirebaseAuth.instance;
-  final firestore = FirebaseFirestore.instance;
 
   @override
   void dispose() {
@@ -52,28 +49,23 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> register() async {
-    // NOVA ALTERAÇÃO: Em vez de vários "if", checamos o formulário todo de uma vez
     if (!_formKey.currentState!.validate()) {
-      return; // Se tiver erro em qualquer campo, para aqui
+      return;
     }
 
     setState(() => loading = true);
 
     try {
-      final userCredential = await auth.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'southamerica-east1',
+      ).httpsCallable('registerUser');
 
-      final uid = userCredential.user!.uid;
-
-      // NOVA ALTERAÇÃO: Usamos o 'getUnmaskedText' para salvar no banco o CPF e o Telefone APENAS com números, sem os traços e pontos.
-      await firestore.collection('users').doc(uid).set({
+      await callable.call({
         'name': nameController.text.trim(),
         'email': emailController.text.trim(),
+        'password': passwordController.text.trim(),
         'cpf': cpfMask.getUnmaskedText(),
         'phone': phoneMask.getUnmaskedText(),
-        'createdAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;
@@ -83,26 +75,28 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseFunctionsException catch (e) {
       String mensagem = 'Erro ao cadastrar usuário.';
 
-      if (e.code == 'email-already-in-use') {
-        mensagem = 'Este email já está em uso.';
-      } else if (e.code == 'invalid-email') {
-        mensagem = 'Email inválido.';
-      } else if (e.code == 'weak-password') {
-        mensagem = 'Senha muito fraca.';
+      if (e.code == 'already-exists') {
+        mensagem = 'Este e-mail já está em uso.';
+      } else if (e.code == 'invalid-argument') {
+        mensagem = e.message ?? 'Dados inválidos.';
+      } else {
+        mensagem = 'Erro da Function: ${e.code} - ${e.message ?? 'sem mensagem'}';
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(mensagem)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensagem)),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro inesperado: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro inesperado: $e')),
+      );
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
