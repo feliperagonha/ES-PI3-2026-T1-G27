@@ -6,18 +6,13 @@ import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 
-export const verifyTwoFactorCode = onCall(
+export const verifyTwoFactorLogin = onCall(
   {region: "southamerica-east1"},
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Logue para operar.");
-    }
+    const {uid, code} = request.data;
 
-    const uid = request.auth.uid;
-    const {code, ativando} = request.data;
-
-    if (!code) {
-      throw new HttpsError("invalid-argument", "Código inválido.");
+    if (!uid || !code) {
+      throw new HttpsError("invalid-argument", "UID e código são obrigatórios.");
     }
 
     const userDoc = await db.collection("users").doc(uid).get();
@@ -43,18 +38,18 @@ export const verifyTwoFactorCode = onCall(
     }
 
     // Limpa o código usado
-    const update: Record<string, unknown> = {
+    await db.collection("users").doc(uid).update({
       twoFactorCode: admin.firestore.FieldValue.delete(),
       twoFactorExpiry: admin.firestore.FieldValue.delete(),
+    });
+
+    // Gera o custom token para logar
+    const customToken = await admin.auth().createCustomToken(uid);
+
+    return {
+      success: true,
+      token: customToken,
+      message: "Login realizado com sucesso.",
     };
-
-    // Se estiver ativando o 2FA, marca como ativado
-    if (ativando === true) {
-      update.twoFactorEnabled = true;
-    }
-
-    await db.collection("users").doc(uid).update(update);
-
-    return {success: true, token: "", message: "Código verificado com sucesso."};
   }
 );

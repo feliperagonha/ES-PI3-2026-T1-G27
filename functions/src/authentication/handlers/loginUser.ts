@@ -4,11 +4,16 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import * as nodemailer from "nodemailer";
+import {defineSecret} from "firebase-functions/params";
 import {
   LoginResponseData,
   FirebaseSignInResponse,
 } from "../types";
 import {validateLoginData} from "../shared/validation";
+
+const gmailUser = defineSecret("GMAIL_USER");
+const gmailPass = defineSecret("GMAIL_PASS");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -17,7 +22,10 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export const loginUser = onCall(
-  {region: "southamerica-east1"},
+  {
+    region: "southamerica-east1",
+    secrets: [gmailUser, gmailPass],
+  },
   async (request): Promise<LoginResponseData> => {
     let email: string;
     let password: string;
@@ -44,7 +52,7 @@ export const loginUser = onCall(
     }
 
     try {
-      // 1. Autentica com email e senha
+      // Autentica com email e senha
       const response = await fetch(
         "https://identitytoolkit.googleapis.com/v1/" +
           `accounts:signInWithPassword?key=${apiKey}`,
@@ -70,7 +78,7 @@ export const loginUser = onCall(
 
       const uid = data.localId;
 
-      // 2. Verifica se o usuário tem 2FA ativado
+      // Verifica se o usuário tem 2FA ativado
       const userDoc = await db.collection("users").doc(uid).get();
       const userData = userDoc.data();
       const twoFactorEnabled = userData?.twoFactorEnabled === true;
@@ -79,22 +87,53 @@ export const loginUser = onCall(
         // Gera e salva código de 6 dígitos
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiry = admin.firestore.Timestamp.fromDate(
-          new Date(Date.now() + 10 * 60 * 1000) // 10 minutos
+          new Date(Date.now() + 10 * 60 * 1000)
         );
 
         await db.collection("users").doc(uid).update({
           twoFactorCode: code,
           twoFactorExpiry: expiry,
-          twoFactorPendingUid: uid,
         });
 
-        // Loga o código (em produção, enviar por email)
-        logger.info(`[2FA Login] Código ${code} para ${email}`);
+        // Envia email com Nodemailer
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: gmailUser.value(),
+            pass: gmailPass.value(),
+          },
+        });
 
-        // TODO: integrar envio de email aqui (SendGrid, Nodemailer, etc.)
+        await transporter.sendMail({
+          from: `"MesclaInvest" <${gmailUser.value()}>`,
+          to: email,
+          subject: "Seu código de acesso — MesclaInvest",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+              <h2 style="color: #6A4CFF;">MesclaInvest</h2>
+              <p>Olá! Seu código de acesso é:</p>
+              <div style="
+                background: #EDE7FF;
+                border-radius: 12px;
+                padding: 24px;
+                text-align: center;
+                margin: 24px 0;
+              ">
+                <span style="
+                  font-size: 36px;
+                  font-weight: 900;
+                  letter-spacing: 8px;
+                  color: #3A1C71;
+                ">${code}</span>
+              </div>
+              <p style="color: #6B7280; font-size: 13px;">
+                Este código é válido por <strong>10 minutos</strong>.<br/>
+                Se você não tentou fazer login, ignore este email.
+              </p>
+            </div>
+          `,
+        });
 
-        // Retorna flag para o Flutter redirecionar para tela de verificação
-        // Não retorna o token ainda!
         return {
           success: false,
           requiresTwoFactor: true,
@@ -104,7 +143,7 @@ export const loginUser = onCall(
         };
       }
 
-      // 3. Sem 2FA — loga direto
+      // Sem 2FA = loga direto
       const customToken = await admin.auth().createCustomToken(uid);
 
       return {

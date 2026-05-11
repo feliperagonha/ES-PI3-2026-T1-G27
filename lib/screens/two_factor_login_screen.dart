@@ -45,31 +45,24 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
 
     setState(() => _verificando = true);
     try {
-      // Verifica o código — ativando: false pois é login, não ativação
-      final callable = _functions.httpsCallable('verifyTwoFactorCode');
+      // Usa verifyTwoFactorLogin — não exige auth prévia
+      final callable = _functions.httpsCallable('verifyTwoFactorLogin');
       final result = await callable.call({
+        'uid': widget.uid,
         'code': _codigoCompleto,
-        'ativando': false,
       });
 
       final data = result.data as Map<String, dynamic>;
-      final token = data['token'] as String?;
+      final token = data['token'] as String;
+
+      await FirebaseAuth.instance.signInWithCustomToken(token);
 
       if (!mounted) return;
-
-      if (token != null && token.isNotEmpty) {
-        // Loga com o custom token retornado
-        await FirebaseAuth.instance.signInWithCustomToken(token);
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const CatalogoStartupsScreen()),
-          (route) => false,
-        );
-      } else {
-        _snack('Erro ao obter token de acesso.');
-      }
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const CatalogoStartupsScreen()),
+        (route) => false,
+      );
     } on FirebaseFunctionsException catch (e) {
       _snack(e.message ?? 'Código inválido ou expirado.');
       for (final c in _controllers) c.clear();
