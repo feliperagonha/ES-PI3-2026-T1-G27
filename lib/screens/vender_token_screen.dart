@@ -2,6 +2,8 @@
 // RA: 24023900
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/startup.dart';
 import '../repositories/startup_repository.dart';
@@ -18,18 +20,56 @@ class VenderTokenScreen extends StatefulWidget {
 class _VenderTokenScreenState extends State<VenderTokenScreen> {
   final StartupRepository _startupRepo = StartupRepository();
   final MercadoService _mercadoService = MercadoService();
+  final _firestore = FirebaseFirestore.instance;
 
   final _precoController = TextEditingController();
   final _quantidadeController = TextEditingController();
 
   Startup? _startupSelecionada;
+  int _saldoDisponivel = 0;
   bool _enviando = false;
+  bool _carregandoSaldo = false;
 
   @override
   void dispose() {
     _precoController.dispose();
     _quantidadeController.dispose();
     super.dispose();
+  }
+
+  // Busca saldo de tokens do usuário para a startup selecionada
+  Future<void> _carregarSaldo(String startupId) async {
+    _carregandoSaldo = true;
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      final investDoc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('investimentos')
+          .doc(startupId)
+          .get();
+
+      final totalShares = investDoc.exists
+          ? (investDoc.data()?['totalShares'] ?? 0) as int
+          : 0;
+
+      // Desconta tokens já anunciados
+      final ofertasSnap = await _firestore
+          .collection('mercado')
+          .where('vendedorId', isEqualTo: uid)
+          .where('startupId', isEqualTo: startupId)
+          .get();
+
+      final tokensAnunciados = ofertasSnap.docs
+          .fold<int>(0, (acc, doc) => acc + ((doc.data()['quantidade'] ?? 0) as int));
+
+      setState(() => _saldoDisponivel = totalShares - tokensAnunciados);
+    } catch (e) {
+      setState(() => _saldoDisponivel = 0);
+    } finally {
+      if (mounted) setState(() => _carregandoSaldo = false);
+    }
   }
 
   Future<void> _confirmarVenda() async {
@@ -50,14 +90,17 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
       _snack('Digite uma quantidade válida.');
       return;
     }
+    if (quantidade > _saldoDisponivel) {
+      _snack('Quantidade maior que seu saldo disponível ($_saldoDisponivel tokens).');
+      return;
+    }
 
     final startup = _startupSelecionada!;
 
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Confirmar venda'),
         content: Text(
           'Colocar $quantidade token${quantidade > 1 ? 's' : ''} '
@@ -99,7 +142,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
       _snack('Token colocado à venda com sucesso!', success: true);
       Navigator.pop(context);
     } on FirebaseFunctionsException catch (e) {
-      _snack('Erro: ${e.message ?? e.code}');
+      _snack(e.message ?? 'Erro: ${e.code}');
     } catch (e) {
       _snack('Erro inesperado: $e');
     } finally {
@@ -141,8 +184,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                        color: Color(0xFF6A4CFF)),
+                    child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
                   );
                 }
 
@@ -157,8 +199,14 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
                   children: startups.map((s) {
                     final selecionada = _startupSelecionada?.id == s.id;
                     return GestureDetector(
-                      onTap: () =>
-                          setState(() => _startupSelecionada = s),
+                      onTap: () {
+                        setState(() {
+                          _startupSelecionada = s;
+                          _quantidadeController.clear();
+                          _precoController.clear();
+                        });
+                        _carregarSaldo(s.id);
+                      },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(14),
@@ -203,8 +251,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     s.name,
@@ -236,21 +283,63 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
               },
             ),
 
+            // ── Saldo disponível ──────────────────────────
+            if (_startupSelecionada != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _saldoDisponivel > 0
+                      ? const Color(0xFFEDE7FF)
+                      : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.token_rounded,
+                      size: 16,
+                      color: _saldoDisponivel > 0
+                          ? const Color(0xFF6A4CFF)
+                          : Colors.red,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                            _saldoDisponivel > 0
+                                ? 'Disponível para venda: $_saldoDisponivel token${_saldoDisponivel != 1 ? 's' : ''}'
+                                : 'Você não possui tokens disponíveis desta startup.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _saldoDisponivel > 0
+                                  ? const Color(0xFF6A4CFF)
+                                  : Colors.red,
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
-            // Quantidade de Tokens
+            // ── Quantidade ────────────────────────────────
             _SectionLabel('Quantidade de tokens'),
             const SizedBox(height: 10),
             _InputField(
               controller: _quantidadeController,
-              hint: 'Ex: 10',
+              hint: _saldoDisponivel > 0
+                  ? 'Máx: $_saldoDisponivel'
+                  : 'Ex: 10',
               keyboardType: TextInputType.number,
               onChanged: (_) => setState(() {}),
+              enabled: _startupSelecionada != null && _saldoDisponivel > 0,
             ),
 
             const SizedBox(height: 20),
 
-            // Preço
+            // ── Preço ─────────────────────────────────────
             _SectionLabel('Preço por token (R\$)'),
             const SizedBox(height: 10),
             _InputField(
@@ -259,6 +348,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => setState(() {}),
+              enabled: _startupSelecionada != null && _saldoDisponivel > 0,
             ),
 
             // Preview do total
@@ -299,12 +389,16 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
 
             const SizedBox(height: 32),
 
-            // Botão confirmar
+            // ── Botão confirmar ───────────────────────────
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _enviando ? null : _confirmarVenda,
+                onPressed: (_enviando ||
+                        _startupSelecionada == null ||
+                        _saldoDisponivel <= 0)
+                    ? null
+                    : _confirmarVenda,
                 icon: const Icon(Icons.sell_rounded,
                     size: 18, color: Colors.white),
                 label: _enviando
@@ -324,6 +418,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
                       ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6A4CFF),
+                  disabledBackgroundColor: Colors.grey.shade300,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -340,17 +435,13 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
 class _SectionLabel extends StatelessWidget {
   final String label;
   const _SectionLabel(this.label);
-
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF1A1A2E),
-      ),
-    );
+    return Text(label,
+        style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1A1A2E)));
   }
 }
 
@@ -359,12 +450,14 @@ class _InputField extends StatelessWidget {
   final String hint;
   final TextInputType keyboardType;
   final ValueChanged<String>? onChanged;
+  final bool enabled;
 
   const _InputField({
     required this.controller,
     required this.hint,
     required this.keyboardType,
     this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -373,11 +466,12 @@ class _InputField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
+      enabled: enabled,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(

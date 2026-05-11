@@ -1,6 +1,3 @@
-// Felipe Ragonha
-// RA: 24023900
-
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
@@ -26,9 +23,52 @@ export const venderToken = onCall(
       throw new HttpsError("invalid-argument", "Preço inválido.");
     }
 
+    // Verifica se o usuário tem tokens suficientes
+    const investimentoRef = db
+      .collection("users").doc(uid)
+      .collection("investimentos").doc(startupId);
+
+    const investimentoSnap = await investimentoRef.get();
+
+    if (!investimentoSnap.exists) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Você não possui tokens desta startup."
+      );
+    }
+
+    const totalShares = investimentoSnap.data()?.totalShares ?? 0;
+
+    if (totalShares < quantidade) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Tokens insuficientes. Você possui ${totalShares} token${totalShares !== 1 ? "s" : ""} desta startup.`
+      );
+    }
+
+    // Verifica se já tem ofertas abertas e soma
+    const ofertasSnap = await db
+      .collection("mercado")
+      .where("vendedorId", "==", uid)
+      .where("startupId", "==", startupId)
+      .get();
+
+    const tokensJaAnunciados = ofertasSnap.docs.reduce(
+      (acc, doc) => acc + (doc.data().quantidade ?? 0), 0
+    );
+
+    if (tokensJaAnunciados + quantidade > totalShares) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Você já tem ${tokensJaAnunciados} token${tokensJaAnunciados !== 1 ? "s" : ""} anunciado${tokensJaAnunciados !== 1 ? "s" : ""}. Disponível para venda: ${totalShares - tokensJaAnunciados}.`
+      );
+    }
+
+    // Busca nome do usuário
     const userDoc = await db.collection("users").doc(uid).get();
     const vendedorNome = userDoc.data()?.name ?? "Investidor";
 
+    // Cria a oferta
     await db.collection("mercado").add({
       startupId,
       startupName,

@@ -2,6 +2,7 @@
 // RA: 24023900
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 import '../models/startup.dart';
 
@@ -30,6 +31,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
   bool _descExpanded = false;
+  double? _menorPrecoMercado;
+  bool _carregandoMercado = true;
 
   Startup get s => widget.startup;
 
@@ -40,6 +43,27 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         vsync: this, duration: const Duration(milliseconds: 700));
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
+    _carregarMenorPreco();
+  }
+
+  Future<void> _carregarMenorPreco() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('mercado')
+          .where('startupId', isEqualTo: s.id)
+          .orderBy('preco')
+          .limit(1)
+          .get();
+
+      setState(() {
+        _menorPrecoMercado = snap.docs.isNotEmpty
+            ? (snap.docs.first.data()['preco'] as num).toDouble()
+            : null;
+        _carregandoMercado = false;
+      });
+    } catch (_) {
+      setState(() => _carregandoMercado = false);
+    }
   }
 
   @override
@@ -443,6 +467,45 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   color: s.tokensAvailable > 0 ? _accent : Colors.red,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: _divider, height: 1),
+          const SizedBox(height: 12),
+          // Menor preço no mercado secundário
+          Row(
+            children: [
+              const Icon(Icons.storefront_outlined, size: 14, color: _textSecondary),
+              const SizedBox(width: 6),
+              const Text(
+                'Mercado secundário',
+                style: TextStyle(fontSize: 11, color: _textSecondary),
+              ),
+              const Spacer(),
+              _carregandoMercado
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _accent),
+                    )
+                  : _menorPrecoMercado != null
+                      ? Text(
+                          'A partir de R\$ ${_menorPrecoMercado!.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: _accent,
+                          ),
+                        )
+                      : const Text(
+                          'Nenhuma oferta ativa',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _textSecondary,
+                          ),
+                        ),
             ],
           ),
         ],
