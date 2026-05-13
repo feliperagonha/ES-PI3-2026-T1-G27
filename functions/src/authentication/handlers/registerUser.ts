@@ -5,6 +5,7 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {createUserWithProfile} from "../repositories/authRepository";
 import {validateRegisterUserData} from "../shared/validation";
+import {ensureWallet} from "../shared/ensureWallet";
 import {RegisterUserResponse} from "../types";
 
 export const registerUser = onCall(
@@ -23,6 +24,8 @@ export const registerUser = onCall(
 
     try {
       const uid = await createUserWithProfile(registerData);
+
+      await ensureWallet(uid);
 
       logger.info("Usuário cadastrado com sucesso.", {
         uid,

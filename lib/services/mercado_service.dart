@@ -1,67 +1,92 @@
 // Felipe Ragonha
 // RA: 24023900
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+//Juliano Perusso
+//RA: 24023434
+
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/oferta.dart';
 
 class MercadoService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Mesma região
   final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
     region: 'southamerica-east1',
   );
 
-  // Stream das ofertas ativas agrupadas por startup
-  Stream<List<Oferta>> getOfertas() {
-    return _firestore
-        .collection('mercado')
-        .orderBy('criadoEm', descending: true)
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => Oferta.fromJson(d.id, d.data())).toList());
+  Future<List<Oferta>> getOfertas() async {
+    final callable = _functions.httpsCallable('listOrders');
+
+    final result = await callable.call({
+      'onlyOpen': true,
+    });
+
+    final response = Map<String, dynamic>.from(result.data);
+
+    final ofertasData = List<Map<String, dynamic>>.from(
+      (response['data'] as List).map(
+            (item) => Map<String, dynamic>.from(item),
+      ),
+    );
+
+    return ofertasData.map((data) {
+      return Oferta.fromJson(data['id'], data);
+    }).toList();
   }
 
-  // Stream de ofertas de uma startup específica
-  Stream<List<Oferta>> getOfertasPorStartup(String startupId) {
-    return _firestore
-        .collection('mercado')
-        .where('startupId', isEqualTo: startupId)
-        .orderBy('preco')
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => Oferta.fromJson(d.id, d.data())).toList());
+  Future<List<Oferta>> getOfertasPorStartup(String startupId) async {
+    final callable = _functions.httpsCallable('listOrders');
+
+    final result = await callable.call({
+      'startupId': startupId,
+      'onlyOpen': true,
+    });
+
+    final response = Map<String, dynamic>.from(result.data);
+
+    final ofertasData = List<Map<String, dynamic>>.from(
+      (response['data'] as List).map(
+            (item) => Map<String, dynamic>.from(item),
+      ),
+    );
+
+    return ofertasData.map((data) {
+      return Oferta.fromJson(data['id'], data);
+    }).toList();
   }
 
-  // Criar oferta de venda via Cloud Function
   Future<void> criarOferta({
     required String startupId,
     required String startupName,
-    required String startupSector,
-    required String startupStage,
+    required String sector,
+    required String stage,
     required int quantidade,
     required double preco,
   }) async {
-    final callable = _functions.httpsCallable('venderToken');
+    final callable = _functions.httpsCallable('placeOrder');
+
     await callable.call({
       'startupId': startupId,
       'startupName': startupName,
-      'startupSector': startupSector,
-      'startupStage': startupStage,
-      'quantidade': quantidade,
-      'preco': preco,
+      'sector': sector,
+      'stage': stage,
+      'type': 'sell',
+      'quantity': quantidade,
+      'price': preco,
     });
   }
 
-  // Comprar token via Cloud Function
   Future<void> comprarToken({required String ofertaId}) async {
-    final callable = _functions.httpsCallable('comprarTokenMercado');
-    await callable.call({'ofertaId': ofertaId});
+    final callable = _functions.httpsCallable('buyInvestorToken');
+
+    await callable.call({
+      'offerId': ofertaId,
+    });
   }
 
-  // Cancelar oferta própria direto no Firestore
   Future<void> cancelarOferta(String ofertaId) async {
-    await _firestore.collection('mercado').doc(ofertaId).delete();
+    final callable = _functions.httpsCallable('cancelOrder');
+
+    await callable.call({
+      'offerId': ofertaId,
+    });
   }
 }

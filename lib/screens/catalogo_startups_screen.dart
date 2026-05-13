@@ -1,5 +1,8 @@
-// Felipe Ragonha E Juliano Perusso
-// RA: 24023900 e 24023434
+// Felipe Ragonha
+// RA: 24023900
+
+// Juliano Perusso
+// RA: 24023434
 
 import 'package:flutter/material.dart';
 import '../models/startup.dart';
@@ -19,8 +22,10 @@ class CatalogoStartupsScreen extends StatefulWidget {
 class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
   final StartupService _service = StartupService();
 
+  late Future<List<Startup>> _startupsFuture;
+
   String _filtroTexto = '';
-  String _filtroEstagio = 'Todos'; // Controla os botões
+  String _filtroEstagio = 'Todos';
 
   final List<String> _estagios = [
     'Todos',
@@ -28,6 +33,18 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     'Em operação',
     'Em expansão',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startupsFuture = _service.listStartups();
+  }
+
+  Future<void> _recarregarStartups() async {
+    setState(() {
+      _startupsFuture = _service.listStartups();
+    });
+  }
 
   bool _matchEstagio(String stageBanco, String filtroSelecionado) {
     final stage = stageBanco.toLowerCase().trim();
@@ -63,13 +80,13 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     }
   }
 
-  // Função que aplica os dois filtros simultaneamente
   List<Startup> _filtrarStartups(List<Startup> startups) {
     return startups.where((startup) {
-      final matchTexto =
-          _filtroTexto.isEmpty ||
-              startup.name.toLowerCase().contains(_filtroTexto.toLowerCase()) ||
-              startup.sector.toLowerCase().contains(_filtroTexto.toLowerCase());
+      final texto = _filtroTexto.toLowerCase().trim();
+
+      final matchTexto = texto.isEmpty ||
+          startup.name.toLowerCase().contains(texto) ||
+          startup.sector.toLowerCase().contains(texto);
 
       final matchEstagio = _matchEstagio(
         startup.stage,
@@ -84,42 +101,39 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F1F1),
-
-    appBar: AppBar(
-      title: const Text('Catálogo de Startups'),
-      centerTitle: true,
-      backgroundColor: const Color(0xFF3A1C71),
-      foregroundColor: Colors.white,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.storefront_outlined),
-          tooltip: 'Balcão de Tokens',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MercadoScreen()),
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.person),
-          tooltip: 'Perfil',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProfileScreen(),
-              ),
-            );
-          },
-        ),
-      ],
-    ),
-
+      appBar: AppBar(
+        title: const Text('Catálogo de Startups'),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF3A1C71),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.storefront_outlined),
+            tooltip: 'Balcão de Tokens',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MercadoScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            tooltip: 'Perfil',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          // Campo de busca por texto
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
             child: TextField(
@@ -127,7 +141,10 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                 filled: true,
                 fillColor: Colors.white,
                 hintText: 'Buscar por nome ou setor...',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF6A4CFF)),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Color(0xFF6A4CFF),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -141,7 +158,6 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
             ),
           ),
 
-          // Botões de Filtro (Nova, Em operação, Em expansão)
           SizedBox(
             height: 50,
             child: ListView.builder(
@@ -164,7 +180,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                           ? FontWeight.bold
                           : FontWeight.normal,
                     ),
-                    onSelected: (selected) {
+                    onSelected: (_) {
                       setState(() {
                         _filtroEstagio = estagio;
                       });
@@ -177,20 +193,41 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
 
           const SizedBox(height: 8),
 
-          // Lista de Startups conectada direto ao Firebase (StreamBuilder)
           Expanded(
-            child: StreamBuilder<List<Startup>>(
-              stream: _service.getStartups(),
+            child: FutureBuilder<List<Startup>>(
+              future: _startupsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF6A4CFF),
+                    ),
                   );
                 }
 
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text('Erro ao carregar startups: ${snapshot.error}'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Erro ao carregar startups: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: _recarregarStartups,
+                            child: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }
 
@@ -201,29 +238,37 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                   return const Center(
                     child: Text(
                       'Nenhuma startup encontrada.',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black54,
+                      ),
                     ),
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: startupsFiltradas.length,
-                  itemBuilder: (context, index) {
-                    final startup = startupsFiltradas[index];
+                return RefreshIndicator(
+                  onRefresh: _recarregarStartups,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: startupsFiltradas.length,
+                    itemBuilder: (context, index) {
+                      final startup = startupsFiltradas[index];
 
-                    return StartupCard(
-                      startup: startup,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StartupDetailScreen(startup: startup),
+                      return StartupCard(
+                        startup: startup,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StartupDetailScreen(
+                                startup: startup,
                               ),
-                            );
-                          },
-                    );
-                  },
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 );
               },
             ),

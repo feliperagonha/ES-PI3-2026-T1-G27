@@ -1,10 +1,14 @@
 // Felipe Ragonha
 // RA: 24023900
 
+//Juliano Perusso
+//RA: 24023434
+
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as nodemailer from "nodemailer";
+import {ensureWallet} from "../shared/ensureWallet";
 import {defineSecret} from "firebase-functions/params";
 import {
   LoginResponseData,
@@ -77,6 +81,8 @@ export const loginUser = onCall(
       }
 
       const uid = data.localId;
+
+      await ensureWallet(uid);
 
       // Verifica se o usuário tem 2FA ativado
       const userDoc = await db.collection("users").doc(uid).get();

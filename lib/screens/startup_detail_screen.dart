@@ -1,26 +1,34 @@
-// Felipe Ragonha
-// RA: 24023900
+//Felipe Ragonha
+//RA: 24023900
+
+
+// Juliano Perusso
+// RA: 24023434
+
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:math' as math;
 import '../models/startup.dart';
 
 // Cores
 const _purple900 = Color(0xFF3A1C71);
 const _purple600 = Color(0xFF6A4CFF);
-const _purple400 = Color(0xFF7C4DFF);
 const _purple100 = Color(0xFFEDE7FF);
-const _accent    = Color(0xFF6A4CFF);
-const _bg        = Color(0xFFF1F1F1);
-const _surface   = Colors.white;
-const _textPrimary   = Color(0xFF1A1A2E);
+const _accent = Color(0xFF6A4CFF);
+const _bg = Color(0xFFF1F1F1);
+const _surface = Colors.white;
+const _textPrimary = Color(0xFF1A1A2E);
 const _textSecondary = Color(0xFF6B7280);
-const _divider   = Color(0xFFE5E7EB);
+const _divider = Color(0xFFE5E7EB);
 
 class StartupDetailScreen extends StatefulWidget {
   final Startup startup;
-  const StartupDetailScreen({super.key, required this.startup});
+
+  const StartupDetailScreen({
+    super.key,
+    required this.startup,
+  });
 
   @override
   State<StartupDetailScreen> createState() => _StartupDetailScreenState();
@@ -30,40 +38,35 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
+
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'southamerica-east1',
+  );
+
   bool _descExpanded = false;
-  double? _menorPrecoMercado;
   bool _carregandoMercado = true;
+  bool _comprandoTokens = false;
+
+  double? _menorPrecoMercado;
 
   Startup get s => widget.startup;
 
   @override
   void initState() {
     super.initState();
+
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 700));
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _fade = CurvedAnimation(
+      parent: _ctrl,
+      curve: Curves.easeOut,
+    );
+
     _ctrl.forward();
     _carregarMenorPreco();
-  }
-
-  Future<void> _carregarMenorPreco() async {
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('mercado')
-          .where('startupId', isEqualTo: s.id)
-          .orderBy('preco')
-          .limit(1)
-          .get();
-
-      setState(() {
-        _menorPrecoMercado = snap.docs.isNotEmpty
-            ? (snap.docs.first.data()['preco'] as num).toDouble()
-            : null;
-        _carregandoMercado = false;
-      });
-    } catch (_) {
-      setState(() => _carregandoMercado = false);
-    }
   }
 
   @override
@@ -72,25 +75,217 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     super.dispose();
   }
 
-  // Stages
+  Future<void> _carregarMenorPreco() async {
+    try {
+      final callable = _functions.httpsCallable('listOrders');
 
-  Color _stageColor(String stage) {
-    switch (stage.toLowerCase()) {
-      case 'ideacao':   return Colors.orange;
-      case 'mvp':       return Colors.blue;
-      case 'seed':      return Colors.purple;
-      case 'operacao':  return Colors.green;
-      default:          return Colors.grey;
+      final result = await callable.call({
+        'startupId': s.id,
+        'onlyOpen': true,
+      });
+
+      final response = Map<String, dynamic>.from(result.data);
+
+      final orders = List<Map<String, dynamic>>.from(
+        (response['data'] as List).map(
+              (item) => Map<String, dynamic>.from(item),
+        ),
+      );
+
+      double? menorPreco;
+
+      for (final order in orders) {
+        final type = order['type']?.toString();
+        final preco = NumberParser.toDouble(order['preco']);
+
+        if (type == 'sell' && preco != null) {
+          if (menorPreco == null || preco < menorPreco) {
+            menorPreco = preco;
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _menorPrecoMercado = menorPreco;
+        _carregandoMercado = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _menorPrecoMercado = null;
+        _carregandoMercado = false;
+      });
     }
   }
 
-  String _formatCurrency(int value) {
-    if (value >= 1000000) return 'R\$ ${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000)    return 'R\$ ${(value / 1000).toStringAsFixed(0)}K';
-    return 'R\$ $value';
+  Future<void> _comprarTokens() async {
+    int quantidadeSelecionada = 0;
+
+    final quantidade = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text('Investir em ${s.name}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Preço atual: R\$ ${s.currentPrice.toStringAsFixed(2)}\n'
+                          'Tokens disponíveis: ${s.tokensAvailable}',
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantidade de tokens',
+                        hintText: 'Ex: 10',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        final qtd = int.tryParse(value.trim()) ?? 0;
+
+                        setDialogState(() {
+                          quantidadeSelecionada = qtd;
+                        });
+                      },
+                    ),
+                    if (quantidadeSelecionada > 0) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Total: R\$ ${(quantidadeSelecionada * s.currentPrice).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: _purple600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: quantidadeSelecionada <= 0
+                      ? null
+                      : () {
+                    Navigator.of(dialogContext)
+                        .pop(quantidadeSelecionada);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _purple600,
+                  ),
+                  child: const Text(
+                    'Comprar',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (quantidade == null) return;
+
+    if (quantidade <= 0) {
+      _snack('Digite uma quantidade válida.');
+      return;
+    }
+
+    if (quantidade > s.tokensAvailable) {
+      _snack('Quantidade maior que os tokens disponíveis.');
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _comprandoTokens = true;
+    });
+
+    try {
+      final callable = _functions.httpsCallable('buyStartupToken');
+
+      await callable.call({
+        'startupId': s.id,
+        'quantity': quantidade,
+      });
+
+      if (!mounted) return;
+
+      _snack(
+        'Compra de $quantidade token${quantidade > 1 ? 's' : ''} realizada com sucesso!',
+        success: true,
+      );
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+
+      _snack(e.message ?? 'Erro: ${e.code}');
+    } catch (e) {
+      if (!mounted) return;
+
+      _snack('Erro inesperado: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _comprandoTokens = false;
+        });
+      }
+    }
   }
 
-  // build
+  void _snack(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? _accent : null,
+      ),
+    );
+  }
+
+  Color _stageColor(String stage) {
+    switch (stage.toLowerCase()) {
+      case 'ideacao':
+      case 'ideação':
+        return Colors.orange;
+      case 'mvp':
+        return Colors.blue;
+      case 'seed':
+        return Colors.purple;
+      case 'operacao':
+      case 'operação':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatCurrency(num value) {
+    if (value >= 1000000) {
+      return 'R\$ ${(value / 1000000).toStringAsFixed(1)}M';
+    }
+
+    if (value >= 1000) {
+      return 'R\$ ${(value / 1000).toStringAsFixed(0)}K';
+    }
+
+    return 'R\$ ${value.toStringAsFixed(0)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +302,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _StatusRow(),
+                    _buildStatusRow(),
                     const SizedBox(height: 20),
                     _buildSection('Sobre a Startup', _buildDescricao()),
                     const SizedBox(height: 20),
@@ -132,20 +327,24 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // SLIVER APP BAR
-
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       expandedHeight: 210,
       pinned: true,
       backgroundColor: _purple900,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        icon: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: Colors.white,
+        ),
         onPressed: () => Navigator.of(context).pop(),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.bookmark_border_rounded, color: Colors.white),
+          icon: const Icon(
+            Icons.bookmark_border_rounded,
+            color: Colors.white,
+          ),
           onPressed: () {},
         ),
       ],
@@ -160,7 +359,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           ),
           child: Stack(
             children: [
-              // Círculo decorativo
               Positioned(
                 right: -50,
                 top: -50,
@@ -169,7 +367,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   height: 220,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -181,11 +379,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.04),
+                    color: Colors.white.withValues(alpha: 0.04),
                   ),
                 ),
               ),
-              // Conteúdo
               Positioned(
                 bottom: 20,
                 left: 20,
@@ -193,7 +390,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Logo box
                     Container(
                       width: 64,
                       height: 64,
@@ -202,10 +398,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: Center(
@@ -229,6 +425,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                         children: [
                           Text(
                             s.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
@@ -237,17 +435,18 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
                               _Chip(
                                 label: s.sector,
-                                bg: Colors.white.withOpacity(0.15),
+                                bg: Colors.white.withValues(alpha: 0.15),
                                 textColor: Colors.white,
                               ),
-                              const SizedBox(width: 8),
                               _Chip(
                                 label: s.stage,
-                                bg: _stageColor(s.stage).withOpacity(0.25),
+                                bg: _stageColor(s.stage).withValues(alpha: 0.25),
                                 textColor: _stageColor(s.stage),
                               ),
                             ],
@@ -265,9 +464,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // STATUS ROW (isActive + status)
-
-  Widget _StatusRow() {
+  Widget _buildStatusRow() {
     return Row(
       children: [
         Container(
@@ -290,15 +487,20 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         const SizedBox(width: 12),
         Container(width: 1, height: 14, color: _divider),
         const SizedBox(width: 12),
-        Text(
-          s.status,
-          style: const TextStyle(fontSize: 13, color: _textSecondary),
+        Expanded(
+          child: Text(
+            s.status,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              color: _textSecondary,
+            ),
+          ),
         ),
       ],
     );
   }
-
-  // SEÇÃO GENÉRICA
 
   Widget _buildSection(String title, Widget content) {
     return Column(
@@ -315,12 +517,16 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary,
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
               ),
             ),
           ],
@@ -331,8 +537,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // DESCRIÇÃO
-
   Widget _buildDescricao() {
     return _Card(
       child: Column(
@@ -341,8 +545,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           Text(
             s.description,
             maxLines: _descExpanded ? null : 4,
-            overflow:
-            _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            overflow: _descExpanded
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 14,
               color: _textSecondary,
@@ -351,7 +556,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           ),
           const SizedBox(height: 8),
           GestureDetector(
-            onTap: () => setState(() => _descExpanded = !_descExpanded),
+            onTap: () {
+              setState(() {
+                _descExpanded = !_descExpanded;
+              });
+            },
             child: Text(
               _descExpanded ? 'Ver menos' : 'Ver mais',
               style: const TextStyle(
@@ -366,8 +575,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // CAPTAÇÃO & TOKENS
-
   Widget _buildCaptacao() {
     final tokensVendidos = s.totalTokens - s.tokensAvailable;
     final pct = s.totalTokens > 0
@@ -377,34 +584,40 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     return _Card(
       child: Column(
         children: [
-          // Linha de valores
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _StatCol(
-                label: 'Capital Investido',
-                value: _formatCurrency(s.capitalInvested),
-                color: _accent,
+              Expanded(
+                child: _StatCol(
+                  label: 'Capital Investido',
+                  value: _formatCurrency(s.capitalInvested),
+                  color: _accent,
+                ),
               ),
-              _StatCol(
-                label: 'Total Investido',
-                value: _formatCurrency(s.totalInvested),
-                color: _textPrimary,
-                align: CrossAxisAlignment.end,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCol(
+                  label: 'Total Investido',
+                  value: _formatCurrency(s.totalInvested),
+                  color: _textPrimary,
+                  align: CrossAxisAlignment.end,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          // Barra de tokens vendidos
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Tokens vendidos',
-                    style: TextStyle(fontSize: 12, color: _textSecondary),
+                  const Expanded(
+                    child: Text(
+                      'Tokens vendidos',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _textSecondary,
+                      ),
+                    ),
                   ),
                   Text(
                     '${(pct * 100).toStringAsFixed(1)}%',
@@ -431,7 +644,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           const SizedBox(height: 18),
           const Divider(color: _divider, height: 1),
           const SizedBox(height: 16),
-          // Grid de tokens
           Row(
             children: [
               Expanded(
@@ -472,48 +684,65 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           const SizedBox(height: 12),
           const Divider(color: _divider, height: 1),
           const SizedBox(height: 12),
-          // Menor preço no mercado secundário
-          Row(
-            children: [
-              const Icon(Icons.storefront_outlined, size: 14, color: _textSecondary),
-              const SizedBox(width: 6),
-              const Text(
-                'Mercado secundário',
-                style: TextStyle(fontSize: 11, color: _textSecondary),
-              ),
-              const Spacer(),
-              _carregandoMercado
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: _accent),
-                    )
-                  : _menorPrecoMercado != null
-                      ? Text(
-                          'A partir de R\$ ${_menorPrecoMercado!.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _accent,
-                          ),
-                        )
-                      : const Text(
-                          'Nenhuma oferta ativa',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _textSecondary,
-                          ),
-                        ),
-            ],
-          ),
+          _buildMercadoSecundarioRow(),
         ],
       ),
     );
   }
 
-  // ESTRUTURA SOCIETÁRIA (founders)
+  Widget _buildMercadoSecundarioRow() {
+    return Row(
+      children: [
+        const Icon(
+          Icons.storefront_outlined,
+          size: 14,
+          color: _textSecondary,
+        ),
+        const SizedBox(width: 6),
+        const Expanded(
+          child: Text(
+            'Mercado secundário',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: _textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: _carregandoMercado
+                ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: _accent,
+              ),
+            )
+                : Text(
+              _menorPrecoMercado != null
+                  ? 'A partir de R\$ ${_menorPrecoMercado!.toStringAsFixed(2)}'
+                  : 'Nenhuma oferta ativa',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _menorPrecoMercado != null
+                    ? _accent
+                    : _textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildSocios() {
     if (s.founders.isEmpty) {
@@ -525,7 +754,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       );
     }
 
-    // Cores para o gráfico e avatares
     final colors = [
       _purple600,
       const Color(0xFF00C896),
@@ -536,7 +764,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
     return Column(
       children: [
-        // Gráfico de pizza
         if (_foundersHavePercentage()) ...[
           _Card(
             child: Column(
@@ -566,8 +793,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                           ),
                           const Text(
                             'fundadores',
-                            style:
-                            TextStyle(fontSize: 11, color: _textSecondary),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -575,14 +804,14 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Legenda
                 Wrap(
                   spacing: 16,
                   runSpacing: 6,
                   alignment: WrapAlignment.center,
                   children: List.generate(s.founders.length, (i) {
-                    final f = s.founders[i];
-                    final nome = _extractName(f);
+                    final founder = s.founders[i];
+                    final nome = _extractName(founder);
+
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -611,15 +840,16 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           ),
           const SizedBox(height: 10),
         ],
-        // Cards individuais dos fundadores
         ...List.generate(s.founders.length, (i) {
-          final f = s.founders[i];
-          final nome = _extractName(f);
-          final cargo = _extractRole(f);
-          final pct = _extractPercentage(f);
+          final founder = s.founders[i];
+          final nome = _extractName(founder);
+          final cargo = _extractRole(founder);
+          final pct = _extractPercentage(founder);
+
           final initials = nome.length >= 2
               ? nome.substring(0, 2).toUpperCase()
               : nome.toUpperCase();
+
           final color = colors[i % colors.length];
 
           return Padding(
@@ -629,7 +859,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: color.withOpacity(0.15),
+                    backgroundColor: color.withValues(alpha: 0.15),
                     child: Text(
                       initials,
                       style: TextStyle(
@@ -646,6 +876,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                       children: [
                         Text(
                           nome,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -655,6 +887,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                         if (cargo.isNotEmpty)
                           Text(
                             cargo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               color: _textSecondary,
@@ -666,9 +900,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   if (pct != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 5),
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
+                        color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -689,8 +925,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // INFORMAÇÕES GERAIS
-
   Widget _buildInfoGeral() {
     return _Card(
       child: Column(
@@ -702,21 +936,24 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           _InfoRow(Icons.circle, 'Status', s.status),
           if (s.videoDemo.isNotEmpty) ...[
             const Divider(color: _divider, height: 24),
-            _InfoRow(Icons.play_circle_outline_rounded, 'Demo', s.videoDemo,
-                isLink: true),
+            _InfoRow(
+              Icons.play_circle_outline_rounded,
+              'Demo',
+              s.videoDemo,
+              isLink: true,
+            ),
           ],
         ],
       ),
     );
   }
 
-  // MENTORES
-
   Widget _buildMentores() {
     return Column(
-      children: s.mentors.map((m) {
-        final nome = _extractName(m);
-        final cargo = _extractRole(m);
+      children: s.mentors.map((mentor) {
+        final nome = _extractName(mentor);
+        final cargo = _extractRole(mentor);
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _Card(
@@ -735,20 +972,32 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(nome,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: _textPrimary,
-                        )),
-                    if (cargo.isNotEmpty)
-                      Text(cargo,
+                        ),
+                      ),
+                      if (cargo.isNotEmpty)
+                        Text(
+                          cargo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 12, color: _textSecondary)),
-                  ],
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -758,44 +1007,52 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // BOTÃO INVESTIR
-
   Widget _buildInvestirButton() {
+    final podeInvestir = s.isActive && s.tokensAvailable > 0 && !_comprandoTokens;
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: s.isActive && s.tokensAvailable > 0
-            ? () {
-          // FAZER: navegar para tela de investimento
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-              Text('Investir em ${s.name} — em breve!'),
-              backgroundColor: _accent,
-            ),
-          );
-        }
-            : null,
+        onPressed: podeInvestir ? _comprarTokens : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: _purple600,
           disabledBackgroundColor: Colors.grey.shade300,
           elevation: 0,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        child: Row(
+        child: _comprandoTokens
+            ? const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        )
+            : Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.rocket_launch_rounded,
-                size: 18, color: Colors.white),
+            const Icon(
+              Icons.rocket_launch_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
             const SizedBox(width: 10),
-            Text(
-              s.tokensAvailable > 0 ? 'Investir agora' : 'Tokens esgotados',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
+            Flexible(
+              child: Text(
+                s.tokensAvailable > 0
+                    ? 'Investir agora'
+                    : 'Tokens esgotados',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -804,37 +1061,53 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // Helpers de founders (List<dynamic>)
-  // O Firestore pode retornar Map ou String
+  String _extractName(dynamic founder) {
+    if (founder is Map) {
+      return founder['name']?.toString() ??
+          founder['nome']?.toString() ??
+          '';
+    }
 
-  String _extractName(dynamic f) {
-    if (f is Map) return f['name']?.toString() ?? f['nome']?.toString() ?? '';
-    return f.toString();
+    return founder.toString();
   }
 
-  String _extractRole(dynamic f) {
-    if (f is Map) return f['role']?.toString() ?? f['cargo']?.toString() ?? '';
+  String _extractRole(dynamic founder) {
+    if (founder is Map) {
+      return founder['role']?.toString() ??
+          founder['cargo']?.toString() ??
+          '';
+    }
+
     return '';
   }
 
-  double? _extractPercentage(dynamic f) {
-    if (f is Map) {
-      final v = f['percentage'] ?? f['percentual'];
-      if (v != null) return (v as num).toDouble();
+  double? _extractPercentage(dynamic founder) {
+    if (founder is Map) {
+      final value = founder['percentage'] ??
+          founder['percentual'] ??
+          founder['participation'] ??
+          founder['participacao'];
+
+      if (value != null) {
+        return (value as num).toDouble();
+      }
     }
+
     return null;
   }
 
   bool _foundersHavePercentage() {
-    return s.founders.any((f) => _extractPercentage(f) != null);
+    return s.founders.any((founder) => _extractPercentage(founder) != null);
   }
 }
 
-//  WIDGETS INTERNOS
-
 class _Card extends StatelessWidget {
   final Widget child;
-  const _Card({required this.child});
+
+  const _Card({
+    required this.child,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -845,7 +1118,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -860,17 +1133,35 @@ class _Chip extends StatelessWidget {
   final String label;
   final Color bg;
   final Color textColor;
-  const _Chip(
-      {required this.label, required this.bg, required this.textColor});
+
+  const _Chip({
+    required this.label,
+    required this.bg,
+    required this.textColor,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration:
-      BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
     );
   }
 }
@@ -880,22 +1171,39 @@ class _StatCol extends StatelessWidget {
   final String value;
   final Color color;
   final CrossAxisAlignment align;
-  const _StatCol(
-      {required this.label,
-        required this.value,
-        required this.color,
-        this.align = CrossAxisAlignment.start});
+
+  const _StatCol({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.align = CrossAxisAlignment.start,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: align,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: _textSecondary)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            color: _textSecondary,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -905,20 +1213,38 @@ class _TokenItem extends StatelessWidget {
   final String label;
   final String value;
   final Color? color;
-  const _TokenItem({required this.label, required this.value, this.color});
+
+  const _TokenItem({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: _textSecondary)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            color: _textSecondary,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: color ?? _textPrimary)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: color ?? _textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -929,20 +1255,33 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isLink;
-  const _InfoRow(this.icon, this.label, this.value, {this.isLink = false});
+
+  const _InfoRow(
+      this.icon,
+      this.label,
+      this.value, {
+        this.isLink = false,
+      });
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Icon(icon, size: 16, color: _accent),
         const SizedBox(width: 10),
-        Text(label,
-            style: const TextStyle(fontSize: 14, color: _textSecondary)),
-        const Spacer(),
-        Flexible(
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: _textSecondary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
           child: Text(
             value,
             textAlign: TextAlign.end,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
@@ -957,49 +1296,84 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-//  PIE CHART PAINTER
-
 class _PiePainter extends CustomPainter {
   final List<dynamic> founders;
   final List<Color> colors;
-  const _PiePainter({required this.founders, required this.colors});
 
-  double _pct(dynamic f) {
-    if (f is Map) {
-      final v = f['percentage'] ?? f['percentual'];
-      if (v != null) return (v as num).toDouble();
+  const _PiePainter({
+    required this.founders,
+    required this.colors,
+  });
+
+  double _pct(dynamic founder) {
+    if (founder is Map) {
+      final value = founder['percentage'] ??
+          founder['percentual'] ??
+          founder['participation'] ??
+          founder['participacao'];
+
+      if (value != null) {
+        return (value as num).toDouble();
+      }
     }
+
     return 0;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final total = founders.fold<double>(0, (sum, f) => sum + _pct(f));
+    final total = founders.fold<double>(
+      0,
+          (sum, founder) => sum + _pct(founder),
+    );
+
     if (total <= 0) return;
 
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 8;
+
     double startAngle = -math.pi / 2;
 
     for (int i = 0; i < founders.length; i++) {
       final sweep = 2 * math.pi * (_pct(founders[i]) / total);
+
       final paint = Paint()
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.fill;
 
       final path = Path()
         ..moveTo(center.dx, center.dy)
-        ..arcTo(Rect.fromCircle(center: center, radius: radius), startAngle,
-            sweep, false)
+        ..arcTo(
+          Rect.fromCircle(center: center, radius: radius),
+          startAngle,
+          sweep,
+          false,
+        )
         ..close();
 
       canvas.drawPath(path, paint);
       startAngle += sweep;
     }
 
-    canvas.drawCircle(center, 48, Paint()..color = _surface);
+    canvas.drawCircle(
+      center,
+      48,
+      Paint()..color = _surface,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class NumberParser {
+  static double? toDouble(dynamic value) {
+    if (value == null) return null;
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString());
+  }
 }
