@@ -606,8 +606,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   Widget _buildRoleBadge() {
     final isSocio = _isSocio;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isSocio
             ? Colors.green.withValues(alpha: 0.12)
@@ -615,22 +617,27 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isSocio ? Icons.verified_rounded : Icons.person_rounded,
             size: 14,
             color: isSocio ? Colors.green : _accent,
           ),
+
           const SizedBox(width: 6),
-          Text(
-            isSocio
-                ? 'Você é sócio — veja e responda todas as perguntas'
-                : 'Você é investidor — acesso ao canal exclusivo',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isSocio ? Colors.green : _accent,
+
+          Expanded(
+            child: Text(
+              isSocio
+                  ? 'Você é sócio — veja e responda as perguntas'
+                  : 'Você é investidor — canal exclusivo',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSocio ? Colors.green : _accent,
+              ),
             ),
           ),
         ],
@@ -816,7 +823,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     children: [
                       Row(
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
                               _isSocio
                                   ? pergunta.autorNome
@@ -830,22 +837,28 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                               ),
                             ),
                           ),
+
                           if (ehAutor && !_isSocio) ...[
                             const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _purple100,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'sua pergunta',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: _accent,
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _purple100,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'sua pergunta',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: _accent,
+                                  ),
                                 ),
                               ),
                             ),
