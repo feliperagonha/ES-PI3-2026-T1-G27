@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/startup.dart';
+import 'private_questions_screen.dart';
 
 // Cores
 const _purple900 = Color(0xFF3A1C71);
@@ -10,7 +11,7 @@ const _purple100 = Color(0xFFEDE7FF);
 const _accent    = Color(0xFF6A4CFF);
 const _bg        = Color(0xFFF1F1F1);
 const _surface   = Colors.white;
-const _textPrimary   = Color(0xFF1A1A2E);
+const _textPrimary   = Color(0xFF1A1A2E); 
 const _textSecondary = Color(0xFF6B7280);
 const _divider   = Color(0xFFE5E7EB);
 
@@ -65,36 +66,88 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   // build
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bg,
-      body: FadeTransition(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: _bg,
+
+    // BOTÕES FIXOS EMBAIXO
+    bottomNavigationBar: SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPerguntasButton(),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            flex: 2,
+            child: _buildInvestirButton(),
+          ),
+        ],
+      ),
+    ),
+
+    body: SafeArea(
+      child: FadeTransition(
         opacity: _fade,
         child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
             _buildSliverAppBar(),
+
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  20,
+                  16,
+                  120, // espaço pro bottomNavigationBar
+                ),
+
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _StatusRow(),
+
                     const SizedBox(height: 20),
-                    _buildSection('Sobre a Startup', _buildDescricao()),
+
+                    _buildSection(
+                      'Sobre a Startup',
+                      _buildDescricao(),
+                    ),
+
                     const SizedBox(height: 20),
-                    _buildSection('Captação & Tokens', _buildCaptacao()),
+
+                    _buildSection(
+                      'Captação & Tokens',
+                      _buildCaptacao(),
+                    ),
+
                     const SizedBox(height: 20),
-                    _buildSection('Estrutura Societária', _buildSocios()),
+
+                    _buildSection(
+                      'Estrutura Societária',
+                      _buildSocios(),
+                    ),
+
                     const SizedBox(height: 20),
-                    _buildSection('Informações Gerais', _buildInfoGeral()),
+
+                    _buildSection(
+                      'Informações Gerais',
+                      _buildInfoGeral(),
+                    ),
+
                     if (s.mentors.isNotEmpty) ...[
                       const SizedBox(height: 20),
-                      _buildSection('Mentores', _buildMentores()),
+
+                      _buildSection(
+                        'Mentores',
+                        _buildMentores(),
+                      ),
                     ],
-                    const SizedBox(height: 28),
-                    _buildInvestirButton(),
                   ],
                 ),
               ),
@@ -102,8 +155,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // SLIVER APP BAR
 
@@ -737,7 +791,41 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       ),
     );
   }
+// BOTÃO PERGUNTAS
 
+Widget _buildPerguntasButton() {
+  return SizedBox(
+    height: 52,
+    child: OutlinedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PrivateQuestionsScreen(
+              startupId: s.id,
+            ),
+          ),
+        );
+      },
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(
+          color: _purple600,
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      child: const Icon(
+        Icons.lock_outline_rounded,
+        color: _purple600,
+        size: 22,
+      ),
+    ),
+  );
+}
   // Helpers de founders (List<dynamic>)
   // O Firestore pode retornar Map ou String
 
