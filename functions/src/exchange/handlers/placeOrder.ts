@@ -1,8 +1,8 @@
-//Arthur Sebastian Guarniz de Castro
-//RA: 24795528
+// Arthur Sebastian Guarniz de Castro
+// RA: 24795528
 
-//Juliano Perusso
-//RA: 24023434
+// Juliano Perusso
+// RA: 24023434
 
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {createOrder} from "../repositories/orderRepository";

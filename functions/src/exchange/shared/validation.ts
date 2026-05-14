@@ -1,4 +1,3 @@
-import {HttpsError} from "firebase-functions/v2/https";
 import {
   OrderType,
   PlaceOrderData,
@@ -7,6 +6,8 @@ import {
   ListOrdersData,
   BuyStartupTokenData,
 } from "../types";
+import {DocumentSnapshot} from "firebase-admin/firestore";
+import {HttpsError} from "firebase-functions/v2/https";
 
 export function normalizeString(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -16,6 +17,59 @@ export function normalizeString(value: unknown): string | undefined {
   const trimmed = value.trim();
 
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export function validateCreateOrderEntities(params: {
+  startupSnap: DocumentSnapshot;
+  walletSnap: DocumentSnapshot;
+  startupId: string;
+}): void {
+  const {startupSnap, walletSnap, startupId} = params;
+
+  if (!startupSnap.exists) {
+    throw new HttpsError(
+      "not-found",
+      `Startup não encontrada para o ID: ${startupId}`
+    );
+  }
+
+  if (!walletSnap.exists) {
+    throw new HttpsError(
+      "not-found",
+      "Carteira do usuário não encontrada."
+    );
+  }
+}
+
+export function validateBuyOrderBalance(params: {
+  balance: number;
+  totalValue: number;
+}): void {
+  const {balance, totalValue} = params;
+
+  if (balance < totalValue) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Saldo insuficiente para criar esta ordem de compra."
+    );
+  }
+}
+
+export function validateSellOrderTokens(params: {
+  totalTokens: number;
+  reservedQuantity: number;
+  requestedQuantity: number;
+}): void {
+  const {totalTokens, reservedQuantity, requestedQuantity} = params;
+
+  const availableQuantity = totalTokens - reservedQuantity;
+
+  if (availableQuantity < requestedQuantity) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Tokens disponíveis insuficientes. Disponível: ${availableQuantity}.`
+    );
+  }
 }
 
 export function validatePlaceOrderData(data: unknown): PlaceOrderData {
@@ -172,3 +226,4 @@ export function validateBuyStartupTokenData(
     quantity,
   };
 }
+

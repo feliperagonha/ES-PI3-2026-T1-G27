@@ -1,12 +1,16 @@
 // Felipe Ragonha
 // RA: 24023900
 
+//Juliano Perusso
+//RA: 24023434
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'authentication/login_page.dart';
 import 'two_factor_verify_screen.dart';
+import 'wallet_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -441,6 +445,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // CRUD
                   _SectionTitle('Conta'),
                   const SizedBox(height: 12),
+
+                  _ActionButton(
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: 'Minha carteira',
+                    color: const Color(0xFF6A4CFF),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WalletPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
 
                   // Sair
                   _ActionButton(
