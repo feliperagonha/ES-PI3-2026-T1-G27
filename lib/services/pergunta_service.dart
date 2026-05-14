@@ -1,6 +1,9 @@
 // Felipe Ragonha
 // RA: 24023900
 
+// Juliano Perusso
+// RA: 24023434
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/pergunta_model.dart';
@@ -11,42 +14,52 @@ class PerguntaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Referência à subcoleção
+  // ─── Referência à subcoleção ─────────────────────────────────────────────────
 
   CollectionReference<Map<String, dynamic>> _col(String startupId) =>
       _db.collection('startups').doc(startupId).collection('perguntas');
 
-  // Verificação: usuário é investidor da startup?
+  // ─── Verificação: usuário é investidor da startup? ────────────────────────────
+  //
+  // Os tokens ficam registrados na coleção "transactions".
+  // Cada doc tem: compradorId/buyerId, vendedorId/sellerId, startupId, quantidade/quantity.
+  // Saldo = Σ compras - Σ vendas. Se saldo > 0 → é investidor ativo.
 
-  /// Retorna true se o usuário atual possui ao menos 1 token da startup.
-  /// A verificação é feita na coleção "portfolios/{uid}/tokens"
-  /// onde cada documento tem o campo "startupId".
-  ///
-  /// Ajuste o caminho se a sua coleção de portfólio tiver outro nome.
   Future<bool> isInvestidor(String startupId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return false;
 
-    // Busca no portfólio do usuário se há tokens desta startup
-    final query = await _db
-        .collection('portfolios')
-        .doc(uid)
-        .collection('tokens')
+    final snap = await _db
+        .collection('transactions')
         .where('startupId', isEqualTo: startupId)
-        .where('quantidade', isGreaterThan: 0)
-        .limit(1)
         .get();
 
-    return query.docs.isNotEmpty;
+    int saldo = 0;
+
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final quantidade =
+          (data['quantidade'] ?? data['quantity'] ?? 0) as num;
+
+      if (quantidade <= 0) continue;
+
+      if (data['compradorId'] == uid || data['buyerId'] == uid) {
+        saldo += quantidade.toInt();
+      }
+
+      if (data['vendedorId'] == uid || data['sellerId'] == uid) {
+        saldo -= quantidade.toInt();
+      }
+    }
+
+    return saldo > 0;
   }
 
-  // Verificação: usuário é sócio (founder) da startup?
+  // ─── Verificação: usuário é sócio (founder) da startup? ──────────────────────
+  //
+  // Verifica o campo "founderUids" (lista de UIDs) no documento da startup.
+  // Adicione esse campo no Firestore com os UIDs dos fundadores de cada startup.
 
-  /// Retorna true se o uid do usuário atual está listado como fundador.
-  /// Verifica no documento da startup se há um campo "founderUids" (lista de UIDs).
-  ///
-  /// Se ainda não tiver este campo no Firestore, pode adicioná-lo ou
-  /// ajustar a lógica aqui para usar outro campo.
   Future<bool> isSocio(String startupId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return false;
@@ -59,10 +72,9 @@ class PerguntaService {
     return founderUids.contains(uid);
   }
 
-  // CRUD de perguntas
+  // ─── CRUD de perguntas ────────────────────────────────────────────────────────
 
-  /// Envia uma nova pergunta (somente investidores autorizados).
-  /// Lança [Exception] se o usuário não for investidor.
+  /// Envia uma nova pergunta (somente investidores com saldo > 0).
   Future<void> enviarPergunta({
     required String startupId,
     required String texto,
@@ -95,9 +107,9 @@ class PerguntaService {
   }
 
   /// Busca as perguntas visíveis para o usuário atual:
-  /// - Se for sócio: retorna TODAS as perguntas da startup.
-  /// - Se for investidor: retorna apenas as perguntas que ele mesmo fez.
-  /// - Caso contrário: retorna lista vazia.
+  /// - Sócio      → todas as perguntas da startup
+  /// - Investidor → apenas as suas próprias perguntas
+  /// - Outros     → lista vazia
   Future<List<Pergunta>> getPerguntas(String startupId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return [];
@@ -107,12 +119,10 @@ class PerguntaService {
     QuerySnapshot<Map<String, dynamic>> snapshot;
 
     if (socio) {
-      // Sócios veem tudo, ordenado por data
       snapshot = await _col(startupId)
           .orderBy('criadoEm', descending: true)
           .get();
     } else {
-      // Investidor vê apenas suas próprias perguntas
       final investidor = await isInvestidor(startupId);
       if (!investidor) return [];
 
@@ -126,7 +136,6 @@ class PerguntaService {
   }
 
   /// Responde a uma pergunta (somente sócios).
-  /// Lança [Exception] se o usuário não for sócio.
   Future<void> responderPergunta({
     required String startupId,
     required String perguntaId,

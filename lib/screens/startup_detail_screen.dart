@@ -50,7 +50,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   bool _carregandoMercado = true;
   bool _comprandoTokens = false;
 
-  // ── Estado das perguntas ──────────────────────────────────────────
+  // Estado das perguntas
   bool _verificandoAcesso = true;
   bool _isInvestidor = false;
   bool _isSocio = false;
@@ -87,7 +87,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     super.dispose();
   }
 
-  // ── Mercado ───────────────────────────────────────────────────────
+  // Mercado
 
   Future<void> _carregarMenorPreco() async {
     try {
@@ -121,7 +121,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     }
   }
 
-  // ── Perguntas privadas ────────────────────────────────────────────
+  // Perguntas privadas
 
   Future<void> _verificarAcessoECarregarPerguntas() async {
     try {
@@ -282,7 +282,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     }
   }
 
-  // ── Compra de tokens ──────────────────────────────────────────────
+  // Compra de tokens
 
   Future<void> _comprarTokens() async {
     int quantidadeSelecionada = 0;
@@ -380,7 +380,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────
+  // Helpers
 
   void _snack(String message, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -416,7 +416,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     return 'há ${diff.inDays} dias';
   }
 
-  // ── Build ─────────────────────────────────────────────────────────
+  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -460,7 +460,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // ── Seção de Perguntas ────────────────────────────────────────────
+  // Seção de Perguntas
 
   Widget _buildPerguntasSection() {
     // Carregando verificação de acesso
@@ -1000,7 +1000,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // ── Widgets de layout ─────────────────────────────────────────────
+  // Widgets de layout
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
@@ -1622,7 +1622,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  // ── Helpers de fundadores ─────────────────────────────────────────
+  // Helpers de fundadores
 
   String _extractName(dynamic founder) {
     if (founder is Map) {
@@ -1652,7 +1652,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   }
 }
 
-// ── Widgets auxiliares ────────────────────────────────────────────────────────
+// Widgets auxiliares
 
 class _Card extends StatelessWidget {
   final Widget child;
