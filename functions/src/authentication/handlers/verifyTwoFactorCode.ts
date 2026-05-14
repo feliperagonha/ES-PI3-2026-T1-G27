@@ -1,3 +1,6 @@
+// Felipe Ragonha
+// RA: 24023900
+
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 

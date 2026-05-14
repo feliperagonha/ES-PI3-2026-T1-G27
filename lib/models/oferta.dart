@@ -1,3 +1,6 @@
+// Felipe Ragonha
+// RA: 24023900
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Oferta {
