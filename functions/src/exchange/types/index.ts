@@ -116,3 +116,28 @@ export type BuyStartupTokenResult = {
   transactionId: string;
 };
 
+export type ValuationPeriod =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "sixMonths"
+  | "ytd";
+
+export type GetTokenValuationHistoryData = {
+  startupId: string;
+  period: ValuationPeriod;
+};
+
+export type TokenValuationPoint = {
+  date: string;
+  price: number;
+  variationPercent: number;
+  volume: number;
+};
+
+export type GetTokenValuationHistoryResponse = {
+  success: boolean;
+  startupId: string;
+  period: ValuationPeriod;
+  data: TokenValuationPoint[];
+};

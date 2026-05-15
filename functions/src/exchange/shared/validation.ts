@@ -5,6 +5,8 @@ import {
   CancelOrderData,
   ListOrdersData,
   BuyStartupTokenData,
+  GetTokenValuationHistoryData,
+  ValuationPeriod,
 } from "../types";
 import {DocumentSnapshot} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
@@ -227,3 +229,45 @@ export function validateBuyStartupTokenData(
   };
 }
 
+const valuationPeriods: ValuationPeriod[] = [
+  "daily",
+  "weekly",
+  "monthly",
+  "sixMonths",
+  "ytd",
+];
+
+export function validateGetTokenValuationHistoryData(
+  data: unknown
+): GetTokenValuationHistoryData {
+  if (!data || typeof data !== "object") {
+    throw new HttpsError(
+      "invalid-argument",
+      "Dados do historico invalidos."
+    );
+  }
+
+  const payload = data as Record<string, unknown>;
+
+  const startupId = normalizeString(payload.startupId);
+  const period = normalizeString(payload.period) ?? "monthly";
+
+  if (!startupId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "startupId obrigatorio."
+    );
+  }
+
+  if (!valuationPeriods.includes(period as ValuationPeriod)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Periodo invalido."
+    );
+  }
+
+  return {
+    startupId,
+    period: period as ValuationPeriod,
+  };
+}

@@ -41,10 +41,19 @@ class _LoginPageState extends State<LoginPage> {
         region: 'southamerica-east1',
       ).httpsCallable('loginUser');
 
-      final result = await callable.call({
-        'email': emailController.text.trim(),
-        'password': passwordController.text.trim(),
-      });
+      final result = await callable
+          .call({
+            'email': emailController.text.trim(),
+            'password': passwordController.text.trim(),
+          })
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw Exception(
+                'Tempo esgotado no login. Verifique a conexao e tente novamente.',
+              );
+            },
+          );
 
       final data = result.data as Map<String, dynamic>;
       final requiresTwoFactor = data['requiresTwoFactor'] == true;
@@ -56,9 +65,7 @@ class _LoginPageState extends State<LoginPage> {
         final uid = data['uid'] as String;
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => TwoFactorLoginScreen(uid: uid),
-          ),
+          MaterialPageRoute(builder: (_) => TwoFactorLoginScreen(uid: uid)),
         );
         return;
       }
@@ -73,13 +80,15 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } on FirebaseFunctionsException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: ${e.message ?? e.code}')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: ${e.message ?? e.code}')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro inesperado: $e')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro inesperado: $e')));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -132,18 +141,22 @@ class _LoginPageState extends State<LoginPage> {
 
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Email',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
+                      child: Text(
+                        'Email',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Preencha seu email';
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value))
+                        }
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                           return 'Email inválido';
+                        }
                         return null;
                       },
                       decoration: InputDecoration(
@@ -151,11 +164,14 @@ class _LoginPageState extends State<LoginPage> {
                         fillColor: Colors.white,
                         hintText: 'Entre com seu email',
                         hintStyle: const TextStyle(
-                            color: Color(0xFF9E9E9E), fontSize: 12),
-                        errorStyle:
-                            const TextStyle(color: Colors.orangeAccent),
+                          color: Color(0xFF9E9E9E),
+                          fontSize: 12,
+                        ),
+                        errorStyle: const TextStyle(color: Colors.orangeAccent),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14),
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
                           borderSide: BorderSide.none,
@@ -167,16 +183,19 @@ class _LoginPageState extends State<LoginPage> {
 
                     const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Senha',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
+                      child: Text(
+                        'Senha',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: passwordController,
                       obscureText: obscure,
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Preencha sua senha';
+                        }
                         return null;
                       },
                       decoration: InputDecoration(
@@ -184,11 +203,14 @@ class _LoginPageState extends State<LoginPage> {
                         fillColor: Colors.white,
                         hintText: 'Entre com sua senha',
                         hintStyle: const TextStyle(
-                            color: Color(0xFF9E9E9E), fontSize: 12),
-                        errorStyle:
-                            const TextStyle(color: Colors.orangeAccent),
+                          color: Color(0xFF9E9E9E),
+                          fontSize: 12,
+                        ),
+                        errorStyle: const TextStyle(color: Colors.orangeAccent),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14),
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             obscure
@@ -196,8 +218,7 @@ class _LoginPageState extends State<LoginPage> {
                                 : Icons.visibility_off_outlined,
                             size: 20,
                           ),
-                          onPressed: () =>
-                              setState(() => obscure = !obscure),
+                          onPressed: () => setState(() => obscure = !obscure),
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(6),
@@ -218,7 +239,9 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           'Esqueceu sua senha?',
                           style: TextStyle(
-                              color: Color(0xFFB8A7FF), fontSize: 12),
+                            color: Color(0xFFB8A7FF),
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -241,10 +264,14 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 22,
                                 height: 22,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
-                            : const Text('PRÓXIMO',
-                                style: TextStyle(color: Colors.white)),
+                            : const Text(
+                                'PRÓXIMO',
+                                style: TextStyle(color: Colors.white),
+                              ),
                       ),
                     ),
 
@@ -255,8 +282,10 @@ class _LoginPageState extends State<LoginPage> {
                         Expanded(child: Divider(color: Colors.white38)),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('Ou',
-                              style: TextStyle(color: Colors.white70)),
+                          child: Text(
+                            'Ou',
+                            style: TextStyle(color: Colors.white70),
+                          ),
                         ),
                         Expanded(child: Divider(color: Colors.white38)),
                       ],
@@ -267,8 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                     TextButton(
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const RegisterPage()),
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
                       ),
                       child: const Text(
                         'Criar uma conta agora',

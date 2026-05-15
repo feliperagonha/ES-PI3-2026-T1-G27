@@ -16,26 +16,31 @@ class TwoFactorLoginScreen extends StatefulWidget {
 }
 
 class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
-  final _functions =
-      FirebaseFunctions.instanceFor(region: 'southamerica-east1');
+  final _functions = FirebaseFunctions.instanceFor(
+    region: 'southamerica-east1',
+  );
 
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes =
-      List.generate(6, (_) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _verificando = false;
   bool _reenviando = false;
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
-  String get _codigoCompleto =>
-      _controllers.map((c) => c.text).join();
+  String get _codigoCompleto => _controllers.map((c) => c.text).join();
 
   Future<void> _verificar() async {
     if (_codigoCompleto.length < 6) {
@@ -65,7 +70,9 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
       );
     } on FirebaseFunctionsException catch (e) {
       _snack(e.message ?? 'Código inválido ou expirado.');
-      for (final c in _controllers) c.clear();
+      for (final c in _controllers) {
+        c.clear();
+      }
       _focusNodes[0].requestFocus();
     } catch (e) {
       _snack('Erro inesperado: $e');
@@ -98,10 +105,12 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
   }
 
   void _snack(String msg, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? const Color(0xFF6A4CFF) : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? const Color(0xFF6A4CFF) : null,
+      ),
+    );
   }
 
   @override
@@ -176,7 +185,7 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 4,
                       ),
                     ],
@@ -187,9 +196,7 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
                     maxLength: 1,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -216,14 +223,17 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
                   backgroundColor: const Color(0xFF6A4CFF),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: _verificando
                     ? const SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text(
                         'Confirmar',
@@ -245,7 +255,9 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Color(0xFF6A4CFF)),
+                        strokeWidth: 2,
+                        color: Color(0xFF6A4CFF),
+                      ),
                     )
                   : const Text(
                       'Reenviar código',

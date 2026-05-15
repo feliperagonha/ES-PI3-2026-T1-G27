@@ -1,5 +1,5 @@
 // Guilherme Marras - 24027681
-// Juliano Perusso - 
+// Juliano Perusso -
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +38,6 @@ class _RegisterPageState extends State<RegisterPage> {
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
   bool loading = false;
-
 
   @override
   void dispose() {
@@ -86,16 +85,17 @@ class _RegisterPageState extends State<RegisterPage> {
       } else if (e.code == 'invalid-argument') {
         mensagem = e.message ?? 'Dados inválidos.';
       } else {
-        mensagem = 'Erro da Function: ${e.code} - ${e.message ?? 'sem mensagem'}';
+        mensagem =
+            'Erro da Function: ${e.code} - ${e.message ?? 'sem mensagem'}';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagem)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro inesperado: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro inesperado: $e')));
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -176,11 +176,7 @@ class _RegisterPageState extends State<RegisterPage> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF3A1C71),
-              Color(0xFF6A4CFF),
-              Color(0xFF3A1C71),
-            ],
+            colors: [Color(0xFF3A1C71), Color(0xFF6A4CFF), Color(0xFF3A1C71)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -229,11 +225,13 @@ class _RegisterPageState extends State<RegisterPage> {
                     hint: 'Entre com seu email',
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Preencha seu email';
+                      }
                       // RegEx simples para verificar formato de email (algo@algo.com)
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value))
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                         return 'Digite um email válido';
+                      }
                       return null;
                     },
                   ),
@@ -268,8 +266,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       setState(() => obscurePassword = !obscurePassword);
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Preencha sua senha';
+                      }
                       if (value.length < 6) return 'Mínimo de 6 caracteres';
                       return null;
                     },
@@ -285,10 +284,12 @@ class _RegisterPageState extends State<RegisterPage> {
                       );
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Confirme sua senha';
-                      if (value != passwordController.text)
+                      }
+                      if (value != passwordController.text) {
                         return 'As senhas não coincidem';
+                      }
                       return null;
                     },
                   ),

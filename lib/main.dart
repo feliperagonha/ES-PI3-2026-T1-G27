@@ -7,9 +7,7 @@ import 'screens/main_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
@@ -29,6 +27,7 @@ class MyApp extends StatelessWidget {
       home: const LoginPage(),
       routes: {
         '/home': (context) => const MainScreen(),
+        '/wallet': (context) => const MainScreen(initialIndex: 3),
       },
     );
   }

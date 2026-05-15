@@ -10,7 +10,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'authentication/login_page.dart';
 import 'two_factor_verify_screen.dart';
-import 'wallet_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,7 +19,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _functions = FirebaseFunctions.instanceFor(region: 'southamerica-east1');
+  final _functions = FirebaseFunctions.instanceFor(
+    region: 'southamerica-east1',
+  );
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
@@ -53,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  // Carregar dados do Firestore 
+  // Carregar dados do Firestore
 
   Future<void> _carregarDados() async {
     final uid = _auth.currentUser?.uid;
@@ -142,7 +143,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Desativar 2FA: pede confirmação
       final confirmar = await _showDialog(
         titulo: 'Desativar 2FA',
-        mensagem: 'Tem certeza que deseja desativar a autenticação em dois fatores?',
+        mensagem:
+            'Tem certeza que deseja desativar a autenticação em dois fatores?',
         botaoConfirmar: 'Desativar',
         corBotao: Colors.orange,
       );
@@ -233,10 +235,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: corBotao,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: Text(botaoConfirmar,
-                style: const TextStyle(color: Colors.white)),
+            child: Text(
+              botaoConfirmar,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -244,10 +249,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _snack(String msg, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? const Color(0xFF6A4CFF) : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? const Color(0xFF6A4CFF) : null,
+      ),
+    );
   }
 
   // Build
@@ -273,7 +280,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6A4CFF)))
+              child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -287,9 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           radius: 48,
                           backgroundColor: const Color(0xFF6A4CFF),
                           child: Text(
-                            _name.isNotEmpty
-                                ? _name[0].toUpperCase()
-                                : '?',
+                            _name.isNotEmpty ? _name[0].toUpperCase() : '?',
                             style: const TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.w800,
@@ -310,7 +316,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Text(
                           _email,
                           style: const TextStyle(
-                              fontSize: 13, color: Color(0xFF6B7280)),
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
                         ),
                       ],
                     ),
@@ -336,14 +344,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               _phoneController.text = _phone;
                             }),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(
-                                  color: Color(0xFF6A4CFF)),
+                              side: const BorderSide(color: Color(0xFF6A4CFF)),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            child: const Text('Cancelar',
-                                style:
-                                    TextStyle(color: Color(0xFF6A4CFF))),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(color: Color(0xFF6A4CFF)),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -353,19 +362,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF6A4CFF),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             child: _saving
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white),
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
-                                : const Text('Salvar',
-                                    style:
-                                        TextStyle(color: Colors.white)),
+                                : const Text(
+                                    'Salvar',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                           ),
                         ),
                       ],
@@ -428,12 +440,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF6A4CFF)),
+                                  strokeWidth: 2,
+                                  color: Color(0xFF6A4CFF),
+                                ),
                               )
                             : Switch(
                                 value: _twoFactorEnabled,
-                                activeColor: const Color(0xFF6A4CFF),
+                                activeThumbColor: const Color(0xFF6A4CFF),
                                 onChanged: _toggle2FA,
                               ),
                       ],
@@ -451,11 +464,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     label: 'Minha carteira',
                     color: const Color(0xFF6A4CFF),
                     onPressed: () {
-                      Navigator.push(
+                      Navigator.pushNamedAndRemoveUntil(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const WalletPage(),
-                        ),
+                        '/wallet',
+                        (route) => false,
                       );
                     },
                   ),
@@ -494,11 +506,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24, color: Color(0xFFE5E7EB)),
           _InfoRow(Icons.email_outlined, 'Email', _email),
           const Divider(height: 24, color: Color(0xFFE5E7EB)),
-          _InfoRow(Icons.phone_outlined, 'Telefone',
-              _phone.isNotEmpty ? _phone : '—'),
+          _InfoRow(
+            Icons.phone_outlined,
+            'Telefone',
+            _phone.isNotEmpty ? _phone : '—',
+          ),
           const Divider(height: 24, color: Color(0xFFE5E7EB)),
-          _InfoRow(Icons.badge_outlined, 'CPF',
-              _cpf.isNotEmpty ? _cpf : '—'),
+          _InfoRow(Icons.badge_outlined, 'CPF', _cpf.isNotEmpty ? _cpf : '—'),
         ],
       ),
     );
@@ -551,11 +565,14 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Text(title,
-            style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E))),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1A1A2E),
+          ),
+        ),
       ],
     );
   }
@@ -574,7 +591,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -597,11 +614,7 @@ class _InfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: const Color(0xFF6A4CFF),
-        ),
+        Icon(icon, size: 18, color: const Color(0xFF6A4CFF)),
 
         const SizedBox(width: 12),
 
@@ -611,10 +624,7 @@ class _InfoRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                ),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               ),
 
               const SizedBox(height: 4),
@@ -642,11 +652,14 @@ class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.label);
   @override
   Widget build(BuildContext context) {
-    return Text(label,
-        style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E)));
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF1A1A2E),
+      ),
+    );
   }
 }
 
@@ -666,20 +679,20 @@ class _EditField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            const TextStyle(color: Colors.black38, fontSize: 13),
+        hintStyle: const TextStyle(color: Colors.black38, fontSize: 13),
         filled: true,
         fillColor: const Color(0xFFF1F1F1),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(
-              color: Color(0xFF6A4CFF), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF6A4CFF), width: 1.5),
         ),
       ),
     );
@@ -711,17 +724,24 @@ class _ActionButton extends StatelessWidget {
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Icon(icon, size: 18, color: Colors.white),
-        label: Text(label,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           elevation: 0,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );

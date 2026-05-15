@@ -9,10 +9,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/oferta.dart';
 import '../services/mercado_service.dart';
 import 'mercado_startup_detail_screen.dart';
+import 'profile_screen.dart';
 import 'vender_token_screen.dart';
 
 class MercadoScreen extends StatefulWidget {
-  const MercadoScreen({super.key});
+  final int refreshTick;
+
+  const MercadoScreen({super.key, this.refreshTick = 0});
 
   @override
   State<MercadoScreen> createState() => _MercadoScreenState();
@@ -30,10 +33,26 @@ class _MercadoScreenState extends State<MercadoScreen> {
     _ofertasFuture = _service.getOfertas();
   }
 
+  @override
+  void didUpdateWidget(covariant MercadoScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.refreshTick != widget.refreshTick) {
+      _ofertasFuture = _service.getOfertas();
+    }
+  }
+
   void _recarregarOfertas() {
     setState(() {
       _ofertasFuture = _service.getOfertas();
     });
+  }
+
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
   }
 
   // Agrupa as ofertas por startup
@@ -58,13 +77,22 @@ class _MercadoScreenState extends State<MercadoScreen> {
         foregroundColor: Colors.white,
         title: const Text(
           'Balcão de Tokens',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _recarregarOfertas,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Atualizar',
+          ),
+          IconButton(
+            onPressed: _openProfile,
+            icon: const Icon(Icons.person_outline_rounded),
+            tooltip: 'Perfil',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -74,10 +102,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Buscar startup...',
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Color(0xFF6A4CFF),
-                ),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF6A4CFF)),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -100,9 +125,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF6A4CFF),
-                    ),
+                    child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
                   );
                 }
 
@@ -128,10 +151,10 @@ class _MercadoScreenState extends State<MercadoScreen> {
                 final filtradas = _busca.trim().isEmpty
                     ? ofertas
                     : ofertas.where((oferta) {
-                  return oferta.startupName
-                      .toLowerCase()
-                      .contains(_busca.toLowerCase());
-                }).toList();
+                        return oferta.startupName.toLowerCase().contains(
+                          _busca.toLowerCase(),
+                        );
+                      }).toList();
 
                 if (filtradas.isEmpty) {
                   return RefreshIndicator(
@@ -141,10 +164,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
                       await _ofertasFuture;
                     },
                     child: ListView(
-                      children: const [
-                        SizedBox(height: 160),
-                        _EmptyState(),
-                      ],
+                      children: const [SizedBox(height: 160), _EmptyState()],
                     ),
                   );
                 }
@@ -208,9 +228,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
           final alterou = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (_) => VenderTokenScreen(
-                userId: user?.uid ?? '',
-              ),
+              builder: (_) => VenderTokenScreen(userId: user?.uid ?? ''),
             ),
           );
 
@@ -219,16 +237,10 @@ class _MercadoScreenState extends State<MercadoScreen> {
           }
         },
         backgroundColor: const Color(0xFF6A4CFF),
-        icon: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
+        icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Vender token',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -277,9 +289,7 @@ class _StartupMercadoCard extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -374,10 +384,7 @@ class _StartupMercadoCard extends StatelessWidget {
                       'a partir de',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF6B7280),
-                      ),
+                      style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
                     ),
 
                     const SizedBox(height: 2),
@@ -440,10 +447,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Seja o primeiro a vender tokens!',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -456,21 +460,13 @@ class _MiniChip extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _MiniChip({
-    required this.label,
-    required this.color,
-  });
+  const _MiniChip({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(
-        maxWidth: 90,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 3,
-      ),
+      constraints: const BoxConstraints(maxWidth: 90),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),

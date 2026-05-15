@@ -10,7 +10,6 @@ import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
 import 'startup_detail_screen.dart';
 import 'profile_screen.dart';
-import 'mercado_screen.dart';
 
 class CatalogoStartupsScreen extends StatefulWidget {
   const CatalogoStartupsScreen({super.key});
@@ -59,9 +58,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
             stage == 'mvp';
 
       case 'Em operação':
-        return stage == 'operacao' ||
-            stage == 'operação' ||
-            stage == 'ativa';
+        return stage == 'operacao' || stage == 'operação' || stage == 'ativa';
 
       case 'Em expansão':
         return stage == 'expansao' ||
@@ -84,14 +81,12 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     return startups.where((startup) {
       final texto = _filtroTexto.toLowerCase().trim();
 
-      final matchTexto = texto.isEmpty ||
+      final matchTexto =
+          texto.isEmpty ||
           startup.name.toLowerCase().contains(texto) ||
           startup.sector.toLowerCase().contains(texto);
 
-      final matchEstagio = _matchEstagio(
-        startup.stage,
-        _filtroEstagio,
-      );
+      final matchEstagio = _matchEstagio(startup.stage, _filtroEstagio);
 
       return matchTexto && matchEstagio;
     }).toList();
@@ -109,24 +104,12 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.storefront_outlined),
-            tooltip: 'Balcão de Tokens',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MercadoScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.person_outline_rounded),
             tooltip: 'Perfil',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             },
           ),
@@ -141,10 +124,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                 filled: true,
                 fillColor: Colors.white,
                 hintText: 'Buscar por nome ou setor...',
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Color(0xFF6A4CFF),
-                ),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF6A4CFF)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -199,9 +179,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF6A4CFF),
-                    ),
+                    child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
                   );
                 }
 
@@ -238,10 +216,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                   return const Center(
                     child: Text(
                       'Nenhuma startup encontrada.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.black54),
                     ),
                   );
                 }
@@ -260,9 +235,8 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => StartupDetailScreen(
-                                startup: startup,
-                              ),
+                              builder: (_) =>
+                                  StartupDetailScreen(startup: startup),
                             ),
                           );
                         },

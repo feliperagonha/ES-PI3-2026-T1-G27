@@ -15,16 +15,19 @@ class MercadoService {
   Future<List<Oferta>> getOfertas() async {
     final callable = _functions.httpsCallable('listOrders');
 
-    final result = await callable.call({
-      'onlyOpen': true,
-    });
+    final result = await callable
+        .call({'onlyOpen': true})
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw Exception('Tempo esgotado ao carregar ofertas.');
+          },
+        );
 
     final response = Map<String, dynamic>.from(result.data);
 
     final ofertasData = List<Map<String, dynamic>>.from(
-      (response['data'] as List).map(
-            (item) => Map<String, dynamic>.from(item),
-      ),
+      (response['data'] as List).map((item) => Map<String, dynamic>.from(item)),
     );
 
     return ofertasData.map((data) {
@@ -35,17 +38,19 @@ class MercadoService {
   Future<List<Oferta>> getOfertasPorStartup(String startupId) async {
     final callable = _functions.httpsCallable('listOrders');
 
-    final result = await callable.call({
-      'startupId': startupId,
-      'onlyOpen': true,
-    });
+    final result = await callable
+        .call({'startupId': startupId, 'onlyOpen': true})
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw Exception('Tempo esgotado ao carregar ofertas.');
+          },
+        );
 
     final response = Map<String, dynamic>.from(result.data);
 
     final ofertasData = List<Map<String, dynamic>>.from(
-      (response['data'] as List).map(
-            (item) => Map<String, dynamic>.from(item),
-      ),
+      (response['data'] as List).map((item) => Map<String, dynamic>.from(item)),
     );
 
     return ofertasData.map((data) {
@@ -77,16 +82,12 @@ class MercadoService {
   Future<void> comprarToken({required String ofertaId}) async {
     final callable = _functions.httpsCallable('buyInvestorToken');
 
-    await callable.call({
-      'offerId': ofertaId,
-    });
+    await callable.call({'offerId': ofertaId});
   }
 
   Future<void> cancelarOferta(String ofertaId) async {
     final callable = _functions.httpsCallable('cancelOrder');
 
-    await callable.call({
-      'offerId': ofertaId,
-    });
+    await callable.call({'offerId': ofertaId});
   }
 }
