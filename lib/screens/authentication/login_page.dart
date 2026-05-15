@@ -5,9 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import 'register_page.dart';
-import '../catalogo_startups_screen.dart';
+import '../main_screen.dart';
 import 'recuperar_senha_page.dart';
-import '../two_factor_login_screen.dart'; 
+import '../two_factor_login_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const CatalogoStartupsScreen()),
+        MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } on FirebaseFunctionsException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
