@@ -39,6 +39,24 @@ class _RegisterPageState extends State<RegisterPage> {
   bool obscureConfirmPassword = true;
   bool loading = false;
 
+  bool get _hasMinLength => passwordController.text.length >= 8;
+  bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(passwordController.text);
+  bool get _hasLowercase => RegExp(r'[a-z]').hasMatch(passwordController.text);
+  bool get _hasNumber => RegExp(r'[0-9]').hasMatch(passwordController.text);
+  bool get _hasSpecialChar => RegExp(
+    r'[!@#\$%^&*(),.?":{}|<>_\-+=;\/\\\[\]~`]',
+  ).hasMatch(passwordController.text);
+
+  bool get _isPasswordValid =>
+      _hasMinLength &&
+      _hasUppercase &&
+      _hasLowercase &&
+      _hasNumber &&
+      _hasSpecialChar;
+
+  String get _passwordRuleMessage =>
+      'Use 8 caracteres, letra maiuscula, minuscula, numero e caractere especial.';
+
   @override
   void dispose() {
     nameController.dispose();
@@ -116,6 +134,7 @@ class _RegisterPageState extends State<RegisterPage> {
     formatters, // Propriedade para receber as máscaras
     String? Function(String?)?
     validator, // Propriedade para receber a regra de erro do campo
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,6 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          onChanged: onChanged,
           inputFormatters: formatters, // Aplica a máscara se houver
           validator: validator, // Executa a validação do campo
           decoration: InputDecoration(
@@ -164,6 +184,52 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 14),
       ],
+    );
+  }
+
+  Widget passwordRequirement(String text, bool valid) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            valid ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+            color: valid ? const Color(0xFFB8FFB8) : Colors.white70,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: valid ? const Color(0xFFB8FFB8) : Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget passwordRequirements() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Sua senha deve conter:',
+            style: TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          passwordRequirement('Pelo menos 8 caracteres', _hasMinLength),
+          passwordRequirement('Uma letra maiuscula', _hasUppercase),
+          passwordRequirement('Uma letra minuscula', _hasLowercase),
+          passwordRequirement('Um numero', _hasNumber),
+          passwordRequirement('Um caractere especial', _hasSpecialChar),
+        ],
+      ),
     );
   }
 
@@ -262,6 +328,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     passwordController,
                     isPassword: true,
                     obscureText: obscurePassword,
+                    onChanged: (_) => setState(() {}),
                     onToggleVisibility: () {
                       setState(() => obscurePassword = !obscurePassword);
                     },
@@ -269,10 +336,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (value == null || value.isEmpty) {
                         return 'Preencha sua senha';
                       }
-                      if (value.length < 6) return 'Mínimo de 6 caracteres';
+                      if (!_isPasswordValid) return _passwordRuleMessage;
                       return null;
                     },
                   ),
+                  passwordRequirements(),
                   field(
                     'Confirme sua Senha',
                     confirmController,

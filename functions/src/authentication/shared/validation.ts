@@ -20,6 +20,19 @@ export function isValidPassword(password: string): boolean {
   return password.length >= 6;
 }
 
+export function isValidRegistrationPassword(password: string): boolean {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*(),.?":{}|<>_\-+=;/\\[\]~`]/.test(password)
+  );
+}
+
+export const passwordRuleMessage =
+  "A senha deve ter pelo menos 8 caracteres, letra maiuscula, letra minuscula, numero e caractere especial.";
+
 export function validateLoginData(data: unknown): {
   email: string;
   password: string;
@@ -84,8 +97,8 @@ export function validateRegisterUserData(data: unknown): RegisterUserData {
     throw new Error("Senha obrigatória.");
   }
 
-  if (!isValidPassword(password)) {
-    throw new Error("A senha deve ter pelo menos 6 caracteres.");
+  if (!isValidRegistrationPassword(password)) {
+    throw new Error(passwordRuleMessage);
   }
 
   return {
