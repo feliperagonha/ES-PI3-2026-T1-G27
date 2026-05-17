@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">MesclaInvest logo</title>
+  <desc id="desc">Dark fintech icon with an abstract M formed by two interlocking geometric forms and a central merge joint.</desc>
+  <defs>
+    <linearGradient id="bg" x1="120" y1="120" x2="904" y2="904" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#070B19"/>
+      <stop offset="0.45" stop-color="#301972"/>
+      <stop offset="1" stop-color="#6A4CFF"/>
+    </linearGradient>
+    <linearGradient id="leftMark" x1="220" y1="520" x2="586" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C3B8FF"/>
+    </linearGradient>
+    <linearGradient id="rightMark" x1="438" y1="520" x2="804" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C3B8FF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="merge" x1="376" y1="505" x2="710" y2="505" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00D8A3"/>
+      <stop offset="1" stop-color="#745CFF"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="22" dy="28" stdDeviation="0" flood-color="#000000" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <g filter="url(#soft-shadow)">
+    <path d="M226 720 326 302H452L586 548 514 690 382 450 314 730Z" fill="url(#leftMark)"/>
+    <path d="M516 690 640 450 710 730 798 720 698 302H572L438 548Z" fill="url(#rightMark)"/>
+  </g>
+  <path d="M376 612 470 506 520 538 650 372H710L552 594 484 554 420 638Z" fill="url(#merge)"/>
+  <path d="M444 548 512 612 478 678 410 596Z" fill="#171135"/>
+  <path d="M580 548 512 612 546 678 614 596Z" fill="#171135"/>
+</svg>
