@@ -8,6 +8,7 @@ import 'register_page.dart';
 import '../main_screen.dart';
 import 'recuperar_senha_page.dart';
 import '../two_factor_login_screen.dart';
+import '../../widgets/mescla_brand_logo.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -118,23 +119,14 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const MesclaBrandLogo(width: 260),
+                    const SizedBox(height: 18),
                     const Text(
-                      'MESCLA\nINVEST',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF7C4DFF),
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        height: 0.9,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Login',
+                      'Acesse sua conta',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 32),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../widgets/mescla_brand_logo.dart';
 
 class RecuperarSenhaPage extends StatefulWidget {
   const RecuperarSenhaPage({super.key});
@@ -57,9 +58,9 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
   }
 
   void mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensagem)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
   @override
@@ -70,8 +71,6 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
 
   @override
   Widget build(BuildContext context) {
-    const corLogo = Color(0xFF7C4DFF);
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: Container(
@@ -80,11 +79,7 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF3A1C71),
-              Color(0xFF6A4CFF),
-              Color(0xFF3A1C71),
-            ],
+            colors: [Color(0xFF3A1C71), Color(0xFF6A4CFF), Color(0xFF3A1C71)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -99,25 +94,16 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'MESCLA\nINVEST',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: corLogo,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      height: 0.9,
-                    ),
-                  ),
+                  const MesclaBrandLogo(width: 260),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
 
                   const Text(
                     'Recuperar Senha',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
 
@@ -127,10 +113,7 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Email',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ),
 
@@ -174,17 +157,17 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
                       ),
                       child: carregando
                           ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Text(
-                        'ENVIAR',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                              'ENVIAR',
+                              style: TextStyle(color: Colors.white),
+                            ),
                     ),
                   ),
 
@@ -196,10 +179,7 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
                     },
                     child: const Text(
                       'Voltar',
-                      style: TextStyle(
-                        color: Color(0xFFB8A7FF),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Color(0xFFB8A7FF), fontSize: 12),
                     ),
                   ),
                 ],
