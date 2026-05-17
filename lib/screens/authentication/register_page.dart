@@ -357,12 +357,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 6),
 
                   SizedBox(
-                    width: double.infinity,
-                    height: 46,
+                    width: 160,
+                    height: 42,
                     child: ElevatedButton(
                       onPressed: loading ? null : register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6A4CFF),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -380,6 +381,27 @@ class _RegisterPageState extends State<RegisterPage> {
                               'PRÓXIMO',
                               style: TextStyle(color: Colors.white),
                             ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: 160,
+                    height: 42,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6A4CFF),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      child: const Text(
+                        'Voltar',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
