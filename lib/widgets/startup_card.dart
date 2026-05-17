@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/startup.dart';
 
+const _purple900 = Color(0xFF3A1C71);
+const _purple600 = Color(0xFF6A4CFF);
+const _purple100 = Color(0xFFEDE7FF);
+const _mint = Color(0xFF00C896);
+const _textPrimary = Color(0xFF1A1A2E);
+const _textSecondary = Color(0xFF6B7280);
+
 class StartupCard extends StatelessWidget {
   final Startup startup;
   final VoidCallback? onTap;
@@ -8,99 +15,272 @@ class StartupCard extends StatelessWidget {
   const StartupCard({super.key, required this.startup, this.onTap});
 
   Color _getStageColor(String stage) {
-    switch (stage.toLowerCase()) {
+    switch (stage.toLowerCase().trim()) {
       case 'ideacao':
-        return Colors.orange;
+      case 'ideação':
+      case 'nova':
+        return const Color(0xFFFFB347);
       case 'mvp':
-        return Colors.blue;
+        return const Color(0xFF00A7E1);
       case 'seed':
-        return Colors.purple;
+        return _purple600;
       case 'operacao':
-        return Colors.green;
+      case 'operação':
+      case 'ativa':
+        return _mint;
+      case 'expansao':
+      case 'expansão':
+      case 'growth':
+        return const Color(0xFF2F80ED);
       default:
-        return Colors.grey;
+        return _textSecondary;
     }
+  }
+
+  String _initials(String name) {
+    final words = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+
+    if (words.isEmpty) {
+      return 'MI';
+    }
+
+    if (words.length == 1) {
+      return words.first
+          .substring(0, words.first.length >= 2 ? 2 : 1)
+          .toUpperCase();
+    }
+
+    return '${words.first[0]}${words.last[0]}'.toUpperCase();
+  }
+
+  String _formatMoney(num value) {
+    return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  String _formatCompact(num value) {
+    if (value >= 1000000) {
+      return 'R\$ ${(value / 1000000).toStringAsFixed(1).replaceAll('.', ',')}M';
+    }
+
+    if (value >= 1000) {
+      return 'R\$ ${(value / 1000).toStringAsFixed(0)}K';
+    }
+
+    return 'R\$ ${value.toStringAsFixed(0)}';
+  }
+
+  double get _soldPercent {
+    if (startup.totalTokens <= 0) {
+      return 0;
+    }
+
+    final sold = startup.totalTokens - startup.tokensAvailable;
+    return (sold / startup.totalTokens).clamp(0, 1);
+  }
+
+  double get _variationPercent {
+    if (startup.initialPrice <= 0) {
+      return 0;
+    }
+
+    return ((startup.currentPrice - startup.initialPrice) /
+            startup.initialPrice) *
+        100;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    final stageColor = _getStageColor(startup.stage);
+    final variation = _variationPercent;
+    final variationColor = variation >= 0 ? _mint : const Color(0xFFFF6B6B);
+    final soldPercent = _soldPercent;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE6E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      startup.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [_purple900, _purple600],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _initials(startup.name),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          startup.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _MiniChip(label: startup.sector, color: _purple600),
+                            _MiniChip(label: startup.stage, color: stageColor),
+                          ],
+                        ),
+                      ],
                     ),
-                    decoration: BoxDecoration(
-                      color: _getStageColor(
-                        startup.stage,
-                      ).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      startup.stage,
-                      style: TextStyle(
-                        color: _getStageColor(startup.stage),
-                        fontWeight: FontWeight.w600,
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Token',
+                        style: TextStyle(fontSize: 11, color: _textSecondary),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatMoney(startup.currentPrice),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _purple600,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            variation >= 0
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
+                            size: 14,
+                            color: variationColor,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${variation >= 0 ? '+' : ''}${variation.toStringAsFixed(1).replaceAll('.', ',')}%',
+                            style: TextStyle(
+                              color: variationColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               Text(
                 startup.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
+                style: const TextStyle(
+                  color: _textSecondary,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
-                    child: _InfoItem(label: 'Setor', value: startup.sector),
+                    child: _Metric(
+                      label: 'Capital',
+                      value: _formatCompact(startup.capitalInvested),
+                    ),
                   ),
                   Expanded(
-                    child: _InfoItem(
-                      label: 'Preço atual',
-                      value: 'R\$ ${startup.currentPrice}',
+                    child: _Metric(
+                      label: 'Disponíveis',
+                      value: '${startup.tokensAvailable}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _Metric(
+                      label: 'Status',
+                      value: startup.isActive ? 'Ativa' : startup.status,
+                      align: CrossAxisAlignment.end,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
-                    child: _InfoItem(
-                      label: 'Tokens',
-                      value:
-                          '${startup.tokensAvailable}/${startup.totalTokens}',
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: soldPercent,
+                        minHeight: 7,
+                        backgroundColor: _purple100,
+                        valueColor: const AlwaysStoppedAnimation(_mint),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: _InfoItem(label: 'Status', value: startup.status),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${(soldPercent * 100).toStringAsFixed(0)}% vendido',
+                    style: const TextStyle(
+                      color: _textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _textSecondary,
+                    size: 20,
                   ),
                 ],
               ),
@@ -112,22 +292,67 @@ class StartupCard extends StatelessWidget {
   }
 }
 
-class _InfoItem extends StatelessWidget {
+class _MiniChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _MiniChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 120),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label.isEmpty ? 'Não informado' : label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
   final String label;
   final String value;
+  final CrossAxisAlignment align;
 
-  const _InfoItem({required this.label, required this.value});
+  const _Metric({
+    required this.label,
+    required this.value,
+    this.align = CrossAxisAlignment.start,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: align,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
         Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: _textSecondary, fontSize: 11),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value.isEmpty ? '-' : value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: _textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );
