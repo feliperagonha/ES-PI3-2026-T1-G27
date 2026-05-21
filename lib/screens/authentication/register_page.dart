@@ -256,7 +256,10 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 8),
-                  const MesclaBrandLogo(width: 260),
+                  const MesclaBrandLogo(
+                    width: 168,
+                    assetPath: 'assets/branding/mescla_mark.png',
+                  ),
                   const SizedBox(height: 18),
                   const Text(
                     'Criar conta',
