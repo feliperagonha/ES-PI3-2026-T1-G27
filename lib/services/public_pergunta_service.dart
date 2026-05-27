@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/pergunta_model.dart';
@@ -11,8 +10,10 @@ class PublicPerguntaService {
 
   // ─── Referência à subcoleção ─────────────────────────────────────────────────
 
-  CollectionReference<Map<String, dynamic>> _col(String startupId) =>
-      _db.collection('startups').doc(startupId).collection('perguntas_publicas');
+  CollectionReference<Map<String, dynamic>> _col(String startupId) => _db
+      .collection('startups')
+      .doc(startupId)
+      .collection('perguntas_publicas');
 
   // ─── Verificação: usuário é investidor da startup? ────────────────────────────
   //
@@ -33,8 +34,7 @@ class PublicPerguntaService {
 
     for (final doc in snap.docs) {
       final data = doc.data();
-      final quantidade =
-          (data['quantidade'] ?? data['quantity'] ?? 0) as num;
+      final quantidade = (data['quantidade'] ?? data['quantity'] ?? 0) as num;
 
       if (quantidade <= 0) continue;
 
@@ -77,7 +77,6 @@ class PublicPerguntaService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado.');
 
-
     final nome = user.displayName?.trim().isNotEmpty == true
         ? user.displayName!
         : user.email ?? 'Investidor';
@@ -96,9 +95,10 @@ class PublicPerguntaService {
   }
 
   Future<List<Pergunta>> getPerguntas(String startupId) async {
-  final snapshot = await _col(startupId)
-      .orderBy('criadoEm', descending: true)
-      .get();
+    final snapshot = await _col(
+      startupId,
+    ).orderBy('criadoEm', descending: true).get();
 
-  return snapshot.docs.map(Pergunta.fromDoc).toList();
+    return snapshot.docs.map(Pergunta.fromDoc).toList();
+  }
 }
