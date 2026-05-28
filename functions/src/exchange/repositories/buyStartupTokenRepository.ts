@@ -2,6 +2,7 @@ import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../shared/firebase";
 import {BuyStartupTokenParams, BuyStartupTokenResult} from "../types";
+import {persistTokenValuation} from "./persistTokenValuation";
 
 export async function buyStartupTokenTransaction(
   params: BuyStartupTokenParams
@@ -76,12 +77,28 @@ export async function buyStartupTokenTransaction(
       );
     }
 
+    const valuation = await persistTokenValuation(transaction, {
+      startupId,
+      startupRef,
+      startup,
+      startupName,
+      sector: sector ?? "",
+      stage: stage ?? "",
+      quantity,
+      price: currentPrice,
+    });
+
     transaction.update(walletRef, {
       balance: FieldValue.increment(-totalValue),
       updatedAt: FieldValue.serverTimestamp(),
     });
 
     transaction.update(startupRef, {
+      currentPrice: valuation.currentPrice,
+      lastValuationDate: valuation.date,
+      lastVariationPercent: valuation.variationPercent,
+      lastTradePrice: currentPrice,
+      lastTradeAt: FieldValue.serverTimestamp(),
       tokensAvailable: FieldValue.increment(-quantity),
       totalInvested: FieldValue.increment(totalValue),
       updatedAt: FieldValue.serverTimestamp(),

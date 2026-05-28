@@ -11,11 +11,12 @@ export const buyInvestorToken = onCall(
 
     const buyerId = request.auth.uid;
 
-    const {offerId} = validateBuyInvestorTokenData(request.data);
+    const {offerId, quantity} = validateBuyInvestorTokenData(request.data);
 
     const result = await buyInvestorTokenTransaction({
       buyerId,
       offerId,
+      quantity,
     });
 
     return {

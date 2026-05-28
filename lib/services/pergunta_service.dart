@@ -130,11 +130,7 @@ class PerguntaService {
     final listaPerguntas = snapshot.docs.map(Pergunta.fromDoc).toList();
 
     // 2. Ordena essa lista na memória (Mais recente primeiro)
-    listaPerguntas.sort((a, b) {
-      if (a.criadoEm == null) return 1;
-      if (b.criadoEm == null) return -1;
-      return b.criadoEm!.compareTo(a.criadoEm!);
-    });
+    listaPerguntas.sort((a, b) => b.criadoEm.compareTo(a.criadoEm));
 
     // 3. Retorna a lista perfeitamente organizada
     return listaPerguntas;

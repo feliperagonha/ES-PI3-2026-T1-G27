@@ -18,11 +18,13 @@ export type PlaceOrderResponse = {
 
 export type BuyInvestorTokenData = {
   offerId: string;
+  quantity?: number;
 };
 
 export type BuyInvestorTokenParams = {
   buyerId: string;
   offerId: string;
+  quantity?: number;
 };
 
 export type BuyInvestorTokenResult = {

@@ -62,8 +62,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   bool _carregandoPerguntasPublicas = true;
   bool _enviandoPerguntaPublica = false;
 
-  bool _campoPerguntaPublicaAberto = false;
-
   final TextEditingController _perguntaPublicaCtrl = TextEditingController();
 
   final TextEditingController _perguntaCtrl = TextEditingController();

@@ -9,6 +9,10 @@ import {defineSecret} from "firebase-functions/params";
 const gmailUser = defineSecret("GMAIL_USER");
 const gmailPass = defineSecret("GMAIL_PASS");
 
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 
 export const sendTwoFactorCode = onCall(
