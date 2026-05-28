@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import '../models/startup.dart';
 import '../models/pergunta_model.dart';
 import '../services/pergunta_service.dart';
+import '../services/public_pergunta_service.dart';
 
 // Cores
 const _purple900 = Color(0xFF3A1C71);
@@ -42,6 +43,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   );
 
   final PerguntaService _perguntaService = PerguntaService();
+  final PublicPerguntaService _publicPerguntaService = PublicPerguntaService();
 
   bool _descExpanded = false;
   bool _carregandoMercado = true;
@@ -55,6 +57,14 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   bool _campoPerguntaAberto = false;
   List<Pergunta> _perguntas = [];
   bool _enviandoPergunta = false;
+  List<Pergunta> _perguntasPublicas = [];
+
+  bool _carregandoPerguntasPublicas = true;
+  bool _enviandoPerguntaPublica = false;
+
+  bool _campoPerguntaPublicaAberto = false;
+
+  final TextEditingController _perguntaPublicaCtrl = TextEditingController();
 
   final TextEditingController _perguntaCtrl = TextEditingController();
 
@@ -75,6 +85,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     _ctrl.forward();
     _carregarMenorPreco();
     _verificarAcessoECarregarPerguntas();
+    _carregarPerguntasPublicas();
   }
 
   @override
@@ -171,6 +182,27 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     }
   }
 
+  Future<void> _carregarPerguntasPublicas() async {
+    setState(() => _carregandoPerguntasPublicas = true);
+
+    try {
+      final perguntas = await _publicPerguntaService.getPerguntas(s.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _perguntasPublicas = perguntas;
+        _carregandoPerguntasPublicas = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _carregandoPerguntasPublicas = false;
+      });
+    }
+  }
+
   Future<void> _enviarPergunta() async {
     debugPrint('BOTÃO CLICADO! O texto digitado é: "${_perguntaCtrl.text}"');
 
@@ -191,6 +223,35 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       _snack('Não foi possível enviar sua pergunta. Verifique o console.');
     } finally {
       if (mounted) setState(() => _enviandoPergunta = false);
+    }
+  }
+
+  Future<void> _enviarPerguntaPublica() async {
+    final texto = _perguntaPublicaCtrl.text.trim();
+
+    if (texto.isEmpty) return;
+
+    setState(() => _enviandoPerguntaPublica = true);
+
+    try {
+      await _publicPerguntaService.enviarPergunta(
+        startupId: s.id,
+        texto: texto,
+      );
+
+      _perguntaPublicaCtrl.clear();
+
+      _snack('Pergunta pública enviada!', success: true);
+
+      await _carregarPerguntasPublicas();
+    } on Exception catch (e) {
+      _snack(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _enviandoPerguntaPublica = false;
+        });
+      }
     }
   }
 
@@ -474,6 +535,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     ],
                     const SizedBox(height: 20),
                     _buildSection(
+                      'Perguntas Públicas',
+                      _buildPerguntasPublicasSection(),
+                    ),
+
+                    const SizedBox(height: 20),
+                    _buildSection(
                       'Perguntas Exclusivas',
                       _buildPerguntasSection(),
                     ),
@@ -490,6 +557,54 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   }
 
   // Seção de Perguntas
+  Widget _buildPerguntasPublicasSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Card(
+          child: Column(
+            children: [
+              TextField(
+                controller: _perguntaPublicaCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Faça uma pergunta pública...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _enviandoPerguntaPublica
+                      ? null
+                      : _enviarPerguntaPublica,
+                  child: const Text('Enviar pergunta'),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        if (_carregandoPerguntasPublicas)
+          const Center(child: CircularProgressIndicator())
+        else if (_perguntasPublicas.isEmpty)
+          const _Card(child: Text('Nenhuma pergunta pública ainda.'))
+        else
+          Column(
+            children: _perguntasPublicas
+                .map((p) => _buildPerguntaCard(p))
+                .toList(),
+          ),
+      ],
+    );
+  }
 
   Widget _buildPerguntasSection() {
     // Carregando verificação de acesso
