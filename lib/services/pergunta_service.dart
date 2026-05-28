@@ -38,8 +38,7 @@ class PerguntaService {
 
     for (final doc in snap.docs) {
       final data = doc.data();
-      final quantidade =
-          (data['quantidade'] ?? data['quantity'] ?? 0) as num;
+      final quantidade = (data['quantidade'] ?? data['quantity'] ?? 0) as num;
 
       if (quantidade <= 0) continue;
 
@@ -119,20 +118,26 @@ class PerguntaService {
     QuerySnapshot<Map<String, dynamic>> snapshot;
 
     if (socio) {
-      snapshot = await _col(startupId)
-          .orderBy('criadoEm', descending: true)
-          .get();
+      snapshot = await _col(startupId).get();
     } else {
       final investidor = await isInvestidor(startupId);
       if (!investidor) return [];
 
-      snapshot = await _col(startupId)
-          .where('autorId', isEqualTo: uid)
-          .orderBy('criadoEm', descending: true)
-          .get();
+      snapshot = await _col(startupId).where('autorId', isEqualTo: uid).get();
     }
 
-    return snapshot.docs.map(Pergunta.fromDoc).toList();
+    // 1. Transforma os documentos do Firebase em uma lista do Flutter
+    final listaPerguntas = snapshot.docs.map(Pergunta.fromDoc).toList();
+
+    // 2. Ordena essa lista na memória (Mais recente primeiro)
+    listaPerguntas.sort((a, b) {
+      if (a.criadoEm == null) return 1;
+      if (b.criadoEm == null) return -1;
+      return b.criadoEm!.compareTo(a.criadoEm!);
+    });
+
+    // 3. Retorna a lista perfeitamente organizada
+    return listaPerguntas;
   }
 
   /// Responde a uma pergunta (somente sócios).
