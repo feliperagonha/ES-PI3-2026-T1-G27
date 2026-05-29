@@ -2,6 +2,7 @@ import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../shared/firebase";
 import {BuyInvestorTokenParams, BuyInvestorTokenResult} from "../types";
+import {persistTokenValuation} from "./persistTokenValuation";
 
 export async function buyInvestorTokenTransaction(
   params: BuyInvestorTokenParams
@@ -16,13 +17,13 @@ export async function buyInvestorTokenTransaction(
     const offerSnap = await transaction.get(offerRef);
 
     if (!offerSnap.exists) {
-      throw new HttpsError("not-found", "Oferta não encontrada.");
+      throw new HttpsError("not-found", "Oferta nao encontrada.");
     }
 
     const offer = offerSnap.data();
 
     if (!offer) {
-      throw new HttpsError("not-found", "Dados da oferta não encontrados.");
+      throw new HttpsError("not-found", "Dados da oferta nao encontrados.");
     }
 
     const sellerId = offer.vendedorId as string | undefined;
@@ -35,7 +36,8 @@ export async function buyInvestorTokenTransaction(
 
     const quantidade = Number(offer.quantidade ?? 0);
     const preco = Number(offer.preco ?? 0);
-    const totalValue = Number(offer.totalValue ?? quantidade * preco);
+    const requestedQuantity = params.quantity ?? quantidade;
+    const totalValue = requestedQuantity * preco;
 
     const offerStatus = offer.offerStatus ?? "open";
     const type = offer.type ?? "sell";
@@ -43,14 +45,14 @@ export async function buyInvestorTokenTransaction(
     if (offerStatus !== "open") {
       throw new HttpsError(
         "failed-precondition",
-        "Esta oferta não está mais aberta."
+        "Esta oferta nao esta mais aberta."
       );
     }
 
     if (type !== "sell") {
       throw new HttpsError(
         "failed-precondition",
-        "Esta oferta não é uma oferta de venda."
+        "Esta oferta nao e uma oferta de venda."
       );
     }
 
@@ -64,7 +66,7 @@ export async function buyInvestorTokenTransaction(
     if (sellerId === buyerId) {
       throw new HttpsError(
         "failed-precondition",
-        "Você não pode comprar sua própria oferta."
+        "Voce nao pode comprar sua propria oferta."
       );
     }
 
@@ -78,30 +80,44 @@ export async function buyInvestorTokenTransaction(
     if (quantidade <= 0 || preco <= 0) {
       throw new HttpsError(
         "failed-precondition",
-        "Oferta possui quantidade ou preço inválido."
+        "Oferta possui quantidade ou preco invalido."
+      );
+    }
+
+    if (requestedQuantity <= 0 || requestedQuantity > quantidade) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Quantidade indisponivel. Disponivel: ${quantidade}.`
       );
     }
 
     const sellerWalletRef = db.collection("wallets").doc(sellerId);
+    const startupRef = db.collection("startups").doc(startupId);
 
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const sellerWalletSnap = await transaction.get(sellerWalletRef);
+    const startupSnap = await transaction.get(startupRef);
 
     if (!buyerWalletSnap.exists) {
       throw new HttpsError(
         "not-found",
-        "Carteira do comprador não encontrada."
+        "Carteira do comprador nao encontrada."
       );
     }
 
     if (!sellerWalletSnap.exists) {
       throw new HttpsError(
         "not-found",
-        "Carteira do vendedor não encontrada."
+        "Carteira do vendedor nao encontrada."
       );
     }
 
+    if (!startupSnap.exists) {
+      throw new HttpsError("not-found", "Startup nao encontrada.");
+    }
+
     const buyerBalance = Number(buyerWalletSnap.data()?.balance ?? 0);
+    const startup = startupSnap.data();
 
     if (buyerBalance < totalValue) {
       throw new HttpsError(
@@ -109,6 +125,17 @@ export async function buyInvestorTokenTransaction(
         "Saldo insuficiente para comprar esta oferta."
       );
     }
+
+    const valuation = await persistTokenValuation(transaction, {
+      startupId,
+      startupRef,
+      startup: startup ?? {},
+      startupName,
+      sector: sector ?? "",
+      stage: stage ?? "",
+      quantity: requestedQuantity,
+      price: preco,
+    });
 
     transaction.update(buyerWalletRef, {
       balance: FieldValue.increment(-totalValue),
@@ -120,12 +147,36 @@ export async function buyInvestorTokenTransaction(
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    transaction.update(offerRef, {
-      offerStatus: "executed",
-      compradorId: buyerId,
-      executadoEm: FieldValue.serverTimestamp(),
+    transaction.update(startupRef, {
+      currentPrice: valuation.currentPrice,
+      lastValuationDate: valuation.date,
+      lastVariationPercent: valuation.variationPercent,
+      lastTradePrice: preco,
+      lastTradeAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    const remainingQuantity = quantidade - requestedQuantity;
+
+    if (remainingQuantity > 0) {
+      transaction.update(offerRef, {
+        quantidade: remainingQuantity,
+        totalValue: remainingQuantity * preco,
+        lastCompradorId: buyerId,
+        lastPurchaseQuantity: requestedQuantity,
+        lastPurchaseValue: totalValue,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      transaction.update(offerRef, {
+        quantidade: 0,
+        totalValue: 0,
+        offerStatus: "executed",
+        compradorId: buyerId,
+        executadoEm: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
 
     transaction.set(transactionRef, {
       type: "buy_investor_token",
@@ -141,7 +192,7 @@ export async function buyInvestorTokenTransaction(
       vendedorId: sellerId,
       vendedorNome: sellerName ?? "",
 
-      quantidade,
+      quantidade: requestedQuantity,
       preco,
       totalValue,
 

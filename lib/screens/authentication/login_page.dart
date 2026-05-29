@@ -119,8 +119,11 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const MesclaBrandLogo(width: 260),
-                    const SizedBox(height: 18),
+                    const MesclaBrandLogo(
+                      width: 168,
+                      assetPath: 'assets/branding/mescla_mark.png',
+                    ),
+                    const SizedBox(height: 22),
                     const Text(
                       'Acesse sua conta',
                       style: TextStyle(
@@ -159,7 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                           color: Color(0xFF9E9E9E),
                           fontSize: 12,
                         ),
-                        errorStyle: const TextStyle(color: Colors.orangeAccent),
+                        errorStyle: const TextStyle(color: Color(0xFFFFD54F)),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 14,
@@ -198,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                           color: Color(0xFF9E9E9E),
                           fontSize: 12,
                         ),
-                        errorStyle: const TextStyle(color: Colors.orangeAccent),
+                        errorStyle: const TextStyle(color: Color(0xFFFFD54F)),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 14,

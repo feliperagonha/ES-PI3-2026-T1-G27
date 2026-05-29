@@ -138,6 +138,7 @@ export function validateBuyInvestorTokenData(
   const payload = data as Record<string, unknown>;
 
   const offerId = normalizeString(payload.offerId);
+  const quantity = payload.quantity;
 
   if (!offerId) {
     throw new HttpsError(
@@ -146,8 +147,21 @@ export function validateBuyInvestorTokenData(
     );
   }
 
+  if (
+    quantity !== undefined &&
+    (typeof quantity !== "number" ||
+      !Number.isInteger(quantity) ||
+      quantity <= 0)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Quantidade invÃ¡lida."
+    );
+  }
+
   return {
     offerId,
+    quantity,
   };
 }
 

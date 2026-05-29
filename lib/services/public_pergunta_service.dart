@@ -1,23 +1,19 @@
-// Felipe Ragonha
-// RA: 24023900
-
-// Juliano Perusso
-// RA: 24023434
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/pergunta_model.dart';
 
 /// Serviço responsável por operações na subcoleção
 /// startups/{startupId}/perguntas
-class PerguntaService {
+class PublicPerguntaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // ─── Referência à subcoleção ─────────────────────────────────────────────────
 
-  CollectionReference<Map<String, dynamic>> _col(String startupId) =>
-      _db.collection('startups').doc(startupId).collection('perguntas');
+  CollectionReference<Map<String, dynamic>> _col(String startupId) => _db
+      .collection('startups')
+      .doc(startupId)
+      .collection('perguntas_publicas');
 
   // ─── Verificação: usuário é investidor da startup? ────────────────────────────
   //
@@ -81,13 +77,6 @@ class PerguntaService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado.');
 
-    final investidor = await isInvestidor(startupId);
-    if (!investidor) {
-      throw Exception(
-        'Acesso negado: apenas investidores desta startup podem enviar perguntas.',
-      );
-    }
-
     final nome = user.displayName?.trim().isNotEmpty == true
         ? user.displayName!
         : user.email ?? 'Investidor';
@@ -105,63 +94,11 @@ class PerguntaService {
     });
   }
 
-  /// Busca as perguntas visíveis para o usuário atual:
-  /// - Sócio      → todas as perguntas da startup
-  /// - Investidor → apenas as suas próprias perguntas
-  /// - Outros     → lista vazia
   Future<List<Pergunta>> getPerguntas(String startupId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return [];
+    final snapshot = await _col(
+      startupId,
+    ).orderBy('criadoEm', descending: true).get();
 
-    final socio = await isSocio(startupId);
-
-    QuerySnapshot<Map<String, dynamic>> snapshot;
-
-    if (socio) {
-      snapshot = await _col(startupId).get();
-    } else {
-      final investidor = await isInvestidor(startupId);
-      if (!investidor) return [];
-
-      snapshot = await _col(startupId).where('autorId', isEqualTo: uid).get();
-    }
-
-    // 1. Transforma os documentos do Firebase em uma lista do Flutter
-    final listaPerguntas = snapshot.docs.map(Pergunta.fromDoc).toList();
-
-    // 2. Ordena essa lista na memória (Mais recente primeiro)
-    listaPerguntas.sort((a, b) => b.criadoEm.compareTo(a.criadoEm));
-
-    // 3. Retorna a lista perfeitamente organizada
-    return listaPerguntas;
-  }
-
-  /// Responde a uma pergunta (somente sócios).
-  Future<void> responderPergunta({
-    required String startupId,
-    required String perguntaId,
-    required String resposta,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não autenticado.');
-
-    final socio = await isSocio(startupId);
-    if (!socio) {
-      throw Exception(
-        'Acesso negado: apenas sócios podem responder perguntas.',
-      );
-    }
-
-    final nome = user.displayName?.trim().isNotEmpty == true
-        ? user.displayName!
-        : user.email ?? 'Sócio';
-
-    await _col(startupId).doc(perguntaId).update({
-      'resposta': resposta.trim(),
-      'respondidoPorId': user.uid,
-      'respondidoPorNome': nome,
-      'status': 'respondida',
-      'respondidoEm': FieldValue.serverTimestamp(),
-    });
+    return snapshot.docs.map(Pergunta.fromDoc).toList();
   }
 }

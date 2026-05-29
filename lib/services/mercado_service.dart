@@ -79,10 +79,13 @@ class MercadoService {
     });
   }
 
-  Future<void> comprarToken({required String ofertaId}) async {
+  Future<void> comprarToken({
+    required String ofertaId,
+    required int quantidade,
+  }) async {
     final callable = _functions.httpsCallable('buyInvestorToken');
 
-    await callable.call({'offerId': ofertaId});
+    await callable.call({'offerId': ofertaId, 'quantity': quantidade});
   }
 
   Future<void> cancelarOferta(String ofertaId) async {

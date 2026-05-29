@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import '../models/startup.dart';
 import '../models/pergunta_model.dart';
 import '../services/pergunta_service.dart';
+import '../services/public_pergunta_service.dart';
 
 // Cores
 const _purple900 = Color(0xFF3A1C71);
@@ -26,10 +27,7 @@ const _divider = Color(0xFFE5E7EB);
 class StartupDetailScreen extends StatefulWidget {
   final Startup startup;
 
-  const StartupDetailScreen({
-    super.key,
-    required this.startup,
-  });
+  const StartupDetailScreen({super.key, required this.startup});
 
   @override
   State<StartupDetailScreen> createState() => _StartupDetailScreenState();
@@ -45,6 +43,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   );
 
   final PerguntaService _perguntaService = PerguntaService();
+  final PublicPerguntaService _publicPerguntaService = PublicPerguntaService();
 
   bool _descExpanded = false;
   bool _carregandoMercado = true;
@@ -58,6 +57,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   bool _campoPerguntaAberto = false;
   List<Pergunta> _perguntas = [];
   bool _enviandoPergunta = false;
+  List<Pergunta> _perguntasPublicas = [];
+
+  bool _carregandoPerguntasPublicas = true;
+  bool _enviandoPerguntaPublica = false;
+
+  final TextEditingController _perguntaPublicaCtrl = TextEditingController();
 
   final TextEditingController _perguntaCtrl = TextEditingController();
 
@@ -78,6 +83,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     _ctrl.forward();
     _carregarMenorPreco();
     _verificarAcessoECarregarPerguntas();
+    _carregarPerguntasPublicas();
   }
 
   @override
@@ -95,7 +101,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       final result = await callable.call({'startupId': s.id, 'onlyOpen': true});
       final response = Map<String, dynamic>.from(result.data);
       final orders = List<Map<String, dynamic>>.from(
-        (response['data'] as List).map((item) => Map<String, dynamic>.from(item)),
+        (response['data'] as List).map(
+          (item) => Map<String, dynamic>.from(item),
+        ),
       );
 
       double? menorPreco;
@@ -123,6 +131,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   // Perguntas privadas
 
+  // Perguntas privadas com tratamento de erro visível
+
   Future<void> _verificarAcessoECarregarPerguntas() async {
     try {
       final investidor = await _perguntaService.isInvestidor(s.id);
@@ -140,7 +150,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       } else {
         if (mounted) setState(() => _carregandoPerguntas = false);
       }
-    } catch (_) {
+    } catch (e, stack) {
+      // AGORA O BUG APARECE NO CONSOLE
+      debugPrint('ERRO EM _verificarAcessoECarregarPerguntas: $e');
+      debugPrint('$stack');
       if (!mounted) return;
       setState(() {
         _verificandoAcesso = false;
@@ -159,13 +172,38 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         _perguntas = perguntas;
         _carregandoPerguntas = false;
       });
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('ERRO EM _carregarPerguntas: $e');
+      debugPrint('$stack');
       if (!mounted) return;
       setState(() => _carregandoPerguntas = false);
     }
   }
 
+  Future<void> _carregarPerguntasPublicas() async {
+    setState(() => _carregandoPerguntasPublicas = true);
+
+    try {
+      final perguntas = await _publicPerguntaService.getPerguntas(s.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _perguntasPublicas = perguntas;
+        _carregandoPerguntasPublicas = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _carregandoPerguntasPublicas = false;
+      });
+    }
+  }
+
   Future<void> _enviarPergunta() async {
+    debugPrint('BOTÃO CLICADO! O texto digitado é: "${_perguntaCtrl.text}"');
+
     final texto = _perguntaCtrl.text.trim();
     if (texto.isEmpty) return;
 
@@ -176,10 +214,42 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       setState(() => _campoPerguntaAberto = false);
       _snack('Pergunta enviada com sucesso!', success: true);
       await _carregarPerguntas();
+    } catch (e, stack) {
+      // AGORA O DO BOTÃO DE ENVIO TAMBÉM APARECE NO POWERSHELL
+      debugPrint('ERRO CRÍTICO NO CLIQUE DO BOTÃO ENVIAR: $e');
+      debugPrint('$stack');
+      _snack('Não foi possível enviar sua pergunta. Verifique o console.');
+    } finally {
+      if (mounted) setState(() => _enviandoPergunta = false);
+    }
+  }
+
+  Future<void> _enviarPerguntaPublica() async {
+    final texto = _perguntaPublicaCtrl.text.trim();
+
+    if (texto.isEmpty) return;
+
+    setState(() => _enviandoPerguntaPublica = true);
+
+    try {
+      await _publicPerguntaService.enviarPergunta(
+        startupId: s.id,
+        texto: texto,
+      );
+
+      _perguntaPublicaCtrl.clear();
+
+      _snack('Pergunta pública enviada!', success: true);
+
+      await _carregarPerguntasPublicas();
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _enviandoPergunta = false);
+      if (mounted) {
+        setState(() {
+          _enviandoPerguntaPublica = false;
+        });
+      }
     }
   }
 
@@ -339,7 +409,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 ElevatedButton(
                   onPressed: quantidadeSelecionada <= 0
                       ? null
-                      : () => Navigator.of(dialogContext).pop(quantidadeSelecionada),
+                      : () => Navigator.of(
+                          dialogContext,
+                        ).pop(quantidadeSelecionada),
                   style: ElevatedButton.styleFrom(backgroundColor: _purple600),
                   child: const Text(
                     'Comprar',
@@ -354,8 +426,14 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
 
     if (quantidade == null) return;
-    if (quantidade <= 0) { _snack('Digite uma quantidade válida.'); return; }
-    if (quantidade > s.tokensAvailable) { _snack('Quantidade maior que os tokens disponíveis.'); return; }
+    if (quantidade <= 0) {
+      _snack('Digite uma quantidade válida.');
+      return;
+    }
+    if (quantidade > s.tokensAvailable) {
+      _snack('Quantidade maior que os tokens disponíveis.');
+      return;
+    }
     if (!mounted) return;
 
     setState(() => _comprandoTokens = true);
@@ -393,11 +471,18 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   Color _stageColor(String stage) {
     switch (stage.toLowerCase()) {
-      case 'ideacao': case 'ideação': return Colors.orange;
-      case 'mvp': return Colors.blue;
-      case 'seed': return Colors.purple;
-      case 'operacao': case 'operação': return Colors.green;
-      default: return Colors.grey;
+      case 'ideacao':
+      case 'ideação':
+        return Colors.orange;
+      case 'mvp':
+        return Colors.blue;
+      case 'seed':
+        return Colors.purple;
+      case 'operacao':
+      case 'operação':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -447,7 +532,16 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                       _buildSection('Mentores', _buildMentores()),
                     ],
                     const SizedBox(height: 20),
-                    _buildSection('Perguntas Exclusivas', _buildPerguntasSection()),
+                    _buildSection(
+                      'Perguntas Públicas',
+                      _buildPerguntasPublicasSection(),
+                    ),
+
+                    const SizedBox(height: 20),
+                    _buildSection(
+                      'Perguntas Exclusivas',
+                      _buildPerguntasSection(),
+                    ),
                     const SizedBox(height: 28),
                     _buildInvestirButton(),
                   ],
@@ -461,6 +555,54 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   }
 
   // Seção de Perguntas
+  Widget _buildPerguntasPublicasSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Card(
+          child: Column(
+            children: [
+              TextField(
+                controller: _perguntaPublicaCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Faça uma pergunta pública...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _enviandoPerguntaPublica
+                      ? null
+                      : _enviarPerguntaPublica,
+                  child: const Text('Enviar pergunta'),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        if (_carregandoPerguntasPublicas)
+          const Center(child: CircularProgressIndicator())
+        else if (_perguntasPublicas.isEmpty)
+          const _Card(child: Text('Nenhuma pergunta pública ainda.'))
+        else
+          Column(
+            children: _perguntasPublicas
+                .map((p) => _buildPerguntaCard(p))
+                .toList(),
+          ),
+      ],
+    );
+  }
 
   Widget _buildPerguntasSection() {
     // Carregando verificação de acesso
@@ -486,11 +628,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 color: _purple100,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.lock_rounded,
-                color: _accent,
-                size: 22,
-              ),
+              child: const Icon(Icons.lock_rounded, color: _accent, size: 22),
             ),
             const SizedBox(width: 14),
             const Expanded(
@@ -611,9 +749,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isSocio
-            ? Colors.green.withValues(alpha: 0.12)
-            : _purple100,
+        color: isSocio ? Colors.green.withValues(alpha: 0.12) : _purple100,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -688,7 +824,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: _accent),
               ),
-              counterStyle: const TextStyle(fontSize: 11, color: _textSecondary),
+              counterStyle: const TextStyle(
+                fontSize: 11,
+                color: _textSecondary,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -769,7 +908,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
       return _Card(
         child: Column(
           children: [
-            Icon(Icons.question_answer_outlined, size: 40, color: Colors.grey.shade400),
+            Icon(
+              Icons.question_answer_outlined,
+              size: 40,
+              color: Colors.grey.shade400,
+            ),
             const SizedBox(height: 10),
             Text(
               _isSocio
@@ -867,14 +1010,20 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                       ),
                       Text(
                         _tempoRelativo(pergunta.criadoEm),
-                        style: const TextStyle(fontSize: 11, color: _textSecondary),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: _textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 // Badge status
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: respondida
                         ? Colors.green.withValues(alpha: 0.12)
@@ -989,7 +1138,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 height: 38,
                 child: OutlinedButton.icon(
                   onPressed: () => _abrirDialogResposta(pergunta),
-                  icon: const Icon(Icons.reply_rounded, size: 16, color: _accent),
+                  icon: const Icon(
+                    Icons.reply_rounded,
+                    size: 16,
+                    color: _accent,
+                  ),
                   label: const Text(
                     'Responder',
                     style: TextStyle(
@@ -1042,9 +1195,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           child: Stack(
             children: [
               Positioned(
-                right: -50, top: -50,
+                right: -50,
+                top: -50,
                 child: Container(
-                  width: 220, height: 220,
+                  width: 220,
+                  height: 220,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.05),
@@ -1052,9 +1207,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 ),
               ),
               Positioned(
-                left: -30, bottom: -30,
+                left: -30,
+                bottom: -30,
                 child: Container(
-                  width: 140, height: 140,
+                  width: 140,
+                  height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.04),
@@ -1062,12 +1219,15 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 ),
               ),
               Positioned(
-                bottom: 20, left: 20, right: 20,
+                bottom: 20,
+                left: 20,
+                right: 20,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      width: 64, height: 64,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
@@ -1111,7 +1271,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                           ),
                           const SizedBox(height: 6),
                           Wrap(
-                            spacing: 8, runSpacing: 6,
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
                               _Chip(
                                 label: s.sector,
@@ -1120,7 +1281,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                               ),
                               _Chip(
                                 label: s.stage,
-                                bg: _stageColor(s.stage).withValues(alpha: 0.25),
+                                bg: _stageColor(
+                                  s.stage,
+                                ).withValues(alpha: 0.25),
                                 textColor: _stageColor(s.stage),
                               ),
                             ],
@@ -1142,7 +1305,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     return Row(
       children: [
         Container(
-          width: 8, height: 8,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: s.isActive ? Colors.green : Colors.red,
@@ -1179,7 +1343,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         Row(
           children: [
             Container(
-              width: 4, height: 18,
+              width: 4,
+              height: 18,
               decoration: BoxDecoration(
                 color: _accent,
                 borderRadius: BorderRadius.circular(2),
@@ -1214,8 +1379,14 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           Text(
             s.description,
             maxLines: _descExpanded ? null : 4,
-            overflow: _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, color: _textSecondary, height: 1.7),
+            overflow: _descExpanded
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              color: _textSecondary,
+              height: 1.7,
+            ),
           ),
           const SizedBox(height: 8),
           GestureDetector(
@@ -1223,7 +1394,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
             child: Text(
               _descExpanded ? 'Ver menos' : 'Ver mais',
               style: const TextStyle(
-                fontSize: 13, color: _accent, fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: _accent,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -1276,7 +1449,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   Text(
                     '${(pct * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700, color: _accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _accent,
                     ),
                   ),
                 ],
@@ -1299,13 +1474,18 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           Row(
             children: [
               Expanded(
-                child: _TokenItem(label: 'Preço Inicial', value: 'R\$ ${s.initialPrice}'),
+                child: _TokenItem(
+                  label: 'Preço Inicial',
+                  value: 'R\$ ${s.initialPrice}',
+                ),
               ),
               Expanded(
                 child: _TokenItem(
                   label: 'Preço Atual',
                   value: 'R\$ ${s.currentPrice}',
-                  color: s.currentPrice >= s.initialPrice ? Colors.green : Colors.red,
+                  color: s.currentPrice >= s.initialPrice
+                      ? Colors.green
+                      : Colors.red,
                 ),
               ),
             ],
@@ -1314,7 +1494,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           Row(
             children: [
               Expanded(
-                child: _TokenItem(label: 'Total de Tokens', value: '${s.totalTokens}'),
+                child: _TokenItem(
+                  label: 'Total de Tokens',
+                  value: '${s.totalTokens}',
+                ),
               ),
               Expanded(
                 child: _TokenItem(
@@ -1353,8 +1536,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
             alignment: Alignment.centerRight,
             child: _carregandoMercado
                 ? const SizedBox(
-                    width: 14, height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _accent,
+                    ),
                   )
                 : Text(
                     _menorPrecoMercado != null
@@ -1366,7 +1553,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: _menorPrecoMercado != null ? _accent : _textSecondary,
+                      color: _menorPrecoMercado != null
+                          ? _accent
+                          : _textSecondary,
                     ),
                   ),
           ),
@@ -1406,7 +1595,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     children: [
                       CustomPaint(
                         size: const Size(180, 180),
-                        painter: _PiePainter(founders: s.founders, colors: colors),
+                        painter: _PiePainter(
+                          founders: s.founders,
+                          colors: colors,
+                        ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1414,12 +1606,17 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                           Text(
                             '${s.founders.length}',
                             style: const TextStyle(
-                              fontSize: 26, fontWeight: FontWeight.w900, color: _textPrimary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: _textPrimary,
                             ),
                           ),
                           const Text(
                             'fundadores',
-                            style: TextStyle(fontSize: 11, color: _textSecondary),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -1428,7 +1625,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 ),
                 const SizedBox(height: 12),
                 Wrap(
-                  spacing: 16, runSpacing: 6,
+                  spacing: 16,
+                  runSpacing: 6,
                   alignment: WrapAlignment.center,
                   children: List.generate(s.founders.length, (i) {
                     final nome = _extractName(s.founders[i]);
@@ -1436,7 +1634,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 10, height: 10,
+                          width: 10,
+                          height: 10,
                           decoration: BoxDecoration(
                             color: colors[i % colors.length],
                             shape: BoxShape.circle,
@@ -1445,7 +1644,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                         const SizedBox(width: 5),
                         Text(
                           nome.split(' ').first,
-                          style: const TextStyle(fontSize: 12, color: _textSecondary),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
                         ),
                       ],
                     );
@@ -1461,7 +1663,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           final nome = _extractName(founder);
           final cargo = _extractRole(founder);
           final pct = _extractPercentage(founder);
-          final initials = nome.length >= 2 ? nome.substring(0, 2).toUpperCase() : nome.toUpperCase();
+          final initials = nome.length >= 2
+              ? nome.substring(0, 2).toUpperCase()
+              : nome.toUpperCase();
           final color = colors[i % colors.length];
 
           return Padding(
@@ -1475,7 +1679,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     child: Text(
                       initials,
                       style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w800, color: color,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: color,
                       ),
                     ),
                   ),
@@ -1489,7 +1695,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700, color: _textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _textPrimary,
                           ),
                         ),
                         if (cargo.isNotEmpty)
@@ -1497,14 +1705,20 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                             cargo,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: _textSecondary),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: _textSecondary,
+                            ),
                           ),
                       ],
                     ),
                   ),
                   if (pct != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
@@ -1512,7 +1726,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                       child: Text(
                         '${pct.toStringAsFixed(0)}%',
                         style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w800, color: color,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: color,
                         ),
                       ),
                     ),
@@ -1536,7 +1752,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           _InfoRow(Icons.circle, 'Status', s.status),
           if (s.videoDemo.isNotEmpty) ...[
             const Divider(color: _divider, height: 24),
-            _InfoRow(Icons.play_circle_outline_rounded, 'Demo', s.videoDemo, isLink: true),
+            _InfoRow(
+              Icons.play_circle_outline_rounded,
+              'Demo',
+              s.videoDemo,
+              isLink: true,
+            ),
           ],
         ],
       ),
@@ -1560,7 +1781,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                   child: Text(
                     nome.isNotEmpty ? nome[0].toUpperCase() : 'M',
                     style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w800, color: _purple600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: _purple600,
                     ),
                   ),
                 ),
@@ -1574,7 +1797,9 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: _textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _textPrimary,
                         ),
                       ),
                       if (cargo.isNotEmpty)
@@ -1582,7 +1807,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                           cargo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: _textSecondary),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _textSecondary,
+                          ),
                         ),
                     ],
                   ),
@@ -1596,7 +1824,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   }
 
   Widget _buildInvestirButton() {
-    final podeInvestir = s.isActive && s.tokensAvailable > 0 && !_comprandoTokens;
+    final podeInvestir =
+        s.isActive && s.tokensAvailable > 0 && !_comprandoTokens;
 
     return SizedBox(
       width: double.infinity,
@@ -1607,25 +1836,39 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           backgroundColor: _purple600,
           disabledBackgroundColor: Colors.grey.shade300,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: _comprandoTokens
             ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.rocket_launch_rounded, size: 18, color: Colors.white),
+                  const Icon(
+                    Icons.rocket_launch_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
-                      s.tokensAvailable > 0 ? 'Investir agora' : 'Tokens esgotados',
+                      s.tokensAvailable > 0
+                          ? 'Investir agora'
+                          : 'Tokens esgotados',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -1653,8 +1896,11 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   double? _extractPercentage(dynamic founder) {
     if (founder is Map) {
-      final value = founder['percentage'] ?? founder['percentual'] ??
-          founder['participation'] ?? founder['participacao'];
+      final value =
+          founder['percentage'] ??
+          founder['percentual'] ??
+          founder['participation'] ??
+          founder['participacao'];
       if (value != null) return (value as num).toDouble();
     }
     return null;
@@ -1703,12 +1949,19 @@ class _Chip extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(maxWidth: 140),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }
@@ -1720,7 +1973,9 @@ class _StatCol extends StatelessWidget {
   final Color color;
   final CrossAxisAlignment align;
   const _StatCol({
-    required this.label, required this.value, required this.color,
+    required this.label,
+    required this.value,
+    required this.color,
     this.align = CrossAxisAlignment.start,
   });
 
@@ -1729,11 +1984,23 @@ class _StatCol extends StatelessWidget {
     return Column(
       crossAxisAlignment: align,
       children: [
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: _textSecondary)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: _textSecondary),
+        ),
         const SizedBox(height: 4),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -1750,12 +2017,23 @@ class _TokenItem extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: _textSecondary)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: _textSecondary),
+        ),
         const SizedBox(height: 4),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                color: color ?? _textPrimary)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: color ?? _textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -1774,7 +2052,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: _accent),
         const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: 14, color: _textSecondary)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, color: _textSecondary),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -1802,8 +2083,11 @@ class _PiePainter extends CustomPainter {
 
   double _pct(dynamic founder) {
     if (founder is Map) {
-      final value = founder['percentage'] ?? founder['percentual'] ??
-          founder['participation'] ?? founder['participacao'];
+      final value =
+          founder['percentage'] ??
+          founder['percentual'] ??
+          founder['participation'] ??
+          founder['participacao'];
       if (value != null) return (value as num).toDouble();
     }
     return 0;
@@ -1825,7 +2109,12 @@ class _PiePainter extends CustomPainter {
         ..style = PaintingStyle.fill;
       final path = Path()
         ..moveTo(center.dx, center.dy)
-        ..arcTo(Rect.fromCircle(center: center, radius: radius), startAngle, sweep, false)
+        ..arcTo(
+          Rect.fromCircle(center: center, radius: radius),
+          startAngle,
+          sweep,
+          false,
+        )
         ..close();
       canvas.drawPath(path, paint);
       startAngle += sweep;

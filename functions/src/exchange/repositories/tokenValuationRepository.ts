@@ -14,6 +14,7 @@ type GroupedValuation = {
   totalValue: number;
   volume: number;
   fallbackPrice?: number;
+  variationPercent?: number;
 };
 
 function getPeriodStart(period: ValuationPeriod): Date {
@@ -47,7 +48,95 @@ function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export async function getTokenValuationHistoryFromRepository(
+async function buildHistoryFromPersistedValuations(
+  startupId: string,
+  period: ValuationPeriod
+): Promise<TokenValuationPoint[]> {
+  const start = getPeriodStart(period);
+  const startKey = toDateKey(start);
+  const snapshot = await db
+    .collection("startups")
+    .doc(startupId)
+    .collection("valuation_history")
+    .limit(500)
+    .get();
+
+  const grouped = new Map<string, GroupedValuation>();
+  let lastPriceBeforeStart = 0;
+  let lastDateBeforeStart = "";
+  let lastVariationBeforeStart = 0;
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const date = typeof data.date === "string" ? data.date : doc.id;
+    const price = Number(data.price ?? data.averagePrice ?? 0);
+    const volume = Number(data.volume ?? 0);
+    const persistedVariation = Number(data.variationPercent ?? 0);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || price <= 0) {
+      continue;
+    }
+
+    if (date < startKey) {
+      if (!lastDateBeforeStart || date > lastDateBeforeStart) {
+        lastDateBeforeStart = date;
+        lastPriceBeforeStart = price;
+        lastVariationBeforeStart = persistedVariation;
+      }
+      continue;
+    }
+
+    grouped.set(date, {
+      totalValue: price * volume,
+      volume,
+      fallbackPrice: price,
+      variationPercent: persistedVariation,
+    });
+  }
+
+  if (lastPriceBeforeStart > 0) {
+    grouped.set(startKey, {
+      totalValue: 0,
+      volume: 0,
+      fallbackPrice: lastPriceBeforeStart,
+      variationPercent: lastVariationBeforeStart,
+    });
+  }
+
+  const entries = Array.from(grouped.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const priceFromGroup = (item: GroupedValuation): number => {
+    if (item.volume > 0) {
+      return item.totalValue / item.volume;
+    }
+
+    return item.fallbackPrice ?? 0;
+  };
+
+  const firstPrice = priceFromGroup(entries[0][1]);
+
+  return entries.map(([date, item]) => {
+    const price = priceFromGroup(item);
+    const variationPercent = item.variationPercent ?? (firstPrice > 0 ?
+      ((price - firstPrice) / firstPrice) * 100 :
+      0);
+
+    return {
+      date,
+      price,
+      variationPercent,
+      volume: item.volume,
+    };
+  });
+}
+
+async function buildHistoryFromTransactions(
   startupId: string,
   period: ValuationPeriod
 ): Promise<TokenValuationPoint[]> {
@@ -159,4 +248,20 @@ export async function getTokenValuationHistoryFromRepository(
       volume: item.volume,
     };
   });
+}
+
+export async function getTokenValuationHistoryFromRepository(
+  startupId: string,
+  period: ValuationPeriod
+): Promise<TokenValuationPoint[]> {
+  const persistedHistory = await buildHistoryFromPersistedValuations(
+    startupId,
+    period
+  );
+
+  if (persistedHistory.length > 0) {
+    return persistedHistory;
+  }
+
+  return buildHistoryFromTransactions(startupId, period);
 }

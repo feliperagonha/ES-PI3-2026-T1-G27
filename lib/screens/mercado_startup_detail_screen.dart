@@ -71,48 +71,23 @@ class _MercadoStartupDetailScreenState
       return;
     }
 
-    final confirmar = await showDialog<bool>(
+    final quantidadeSelecionada = await showDialog<int>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('Confirmar compra'),
-        content: Text(
-          'Comprar ${oferta.quantidade} token${oferta.quantidade > 1 ? 's' : ''} '
-              'de ${oferta.startupName} por R\$ ${oferta.preco.toStringAsFixed(2)} cada?\n\n'
-              'Total: R\$ ${(oferta.preco * oferta.quantidade).toStringAsFixed(2)}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6A4CFF),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text(
-              'Comprar',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      builder: (_) => _ComprarOfertaDialog(oferta: oferta),
     );
 
-    if (confirmar != true) return;
+    if (quantidadeSelecionada == null) return;
+    if (!mounted) return;
 
     setState(() {
       _comprando = true;
     });
 
     try {
-      await _service.comprarToken(ofertaId: oferta.id);
+      await _service.comprarToken(
+        ofertaId: oferta.id,
+        quantidade: quantidadeSelecionada,
+      );
 
       if (!mounted) return;
 
@@ -364,6 +339,117 @@ class _MercadoStartupDetailScreenState
           },
         ),
       ),
+    );
+  }
+}
+
+class _ComprarOfertaDialog extends StatefulWidget {
+  final Oferta oferta;
+
+  const _ComprarOfertaDialog({required this.oferta});
+
+  @override
+  State<_ComprarOfertaDialog> createState() => _ComprarOfertaDialogState();
+}
+
+class _ComprarOfertaDialogState extends State<_ComprarOfertaDialog> {
+  late final TextEditingController _quantidadeController;
+  late int _quantidade;
+  String? _erro;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantidade = widget.oferta.quantidade;
+    _quantidadeController = TextEditingController(
+      text: widget.oferta.quantidade.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _quantidadeController.dispose();
+    super.dispose();
+  }
+
+  void _atualizarQuantidade(String value) {
+    final parsed = int.tryParse(value.trim());
+
+    setState(() {
+      _quantidade = parsed ?? 0;
+      if (parsed == null || parsed <= 0) {
+        _erro = 'Informe uma quantidade valida.';
+      } else if (parsed > widget.oferta.quantidade) {
+        _erro = 'Disponivel: ${widget.oferta.quantidade} tokens.';
+      } else {
+        _erro = null;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oferta = widget.oferta;
+    final total = _quantidade > 0 ? _quantidade * oferta.preco : 0.0;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: const Text('Comprar tokens'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${oferta.startupName}\n'
+            'Preco por token: R\$ ${oferta.preco.toStringAsFixed(2)}\n'
+            'Disponivel: ${oferta.quantidade} token${oferta.quantidade > 1 ? 's' : ''}',
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _quantidadeController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Quantidade de tokens',
+              errorText: _erro,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: _atualizarQuantidade,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Total: R\$ ${total.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF3A1C71),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _erro == null && _quantidade > 0
+              ? () => Navigator.pop(context, _quantidade)
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6A4CFF),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text(
+            'Comprar',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }
