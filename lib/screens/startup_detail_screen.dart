@@ -12,6 +12,7 @@ import '../models/startup.dart';
 import '../models/pergunta_model.dart';
 import '../services/pergunta_service.dart';
 import '../services/public_pergunta_service.dart';
+import '../widgets/startup_video_player.dart';
 
 // Cores
 const _purple900 = Color(0xFF3A1C71);
@@ -521,6 +522,13 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                     _buildStatusRow(),
                     const SizedBox(height: 20),
                     _buildSection('Sobre a Startup', _buildDescricao()),
+                    if (s.videoDemo.trim().isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      _buildSection(
+                        'Video demonstrativo',
+                        StartupVideoPlayer(videoPath: s.videoDemo),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     _buildSection('Captação & Tokens', _buildCaptacao()),
                     const SizedBox(height: 20),
@@ -1750,15 +1758,6 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
           _InfoRow(Icons.trending_up_rounded, 'Estágio', s.stage),
           const Divider(color: _divider, height: 24),
           _InfoRow(Icons.circle, 'Status', s.status),
-          if (s.videoDemo.isNotEmpty) ...[
-            const Divider(color: _divider, height: 24),
-            _InfoRow(
-              Icons.play_circle_outline_rounded,
-              'Demo',
-              s.videoDemo,
-              isLink: true,
-            ),
-          ],
         ],
       ),
     );
@@ -2043,8 +2042,7 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final bool isLink;
-  const _InfoRow(this.icon, this.label, this.value, {this.isLink = false});
+  const _InfoRow(this.icon, this.label, this.value);
 
   @override
   Widget build(BuildContext context) {
@@ -2063,11 +2061,10 @@ class _InfoRow extends StatelessWidget {
             textAlign: TextAlign.end,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isLink ? _accent : _textPrimary,
-              decoration: isLink ? TextDecoration.underline : null,
+              color: _textPrimary,
             ),
           ),
         ),

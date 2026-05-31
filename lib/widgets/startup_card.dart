@@ -11,8 +11,14 @@ const _textSecondary = Color(0xFF6B7280);
 class StartupCard extends StatelessWidget {
   final Startup startup;
   final VoidCallback? onTap;
+  final VoidCallback? onPlayVideo;
 
-  const StartupCard({super.key, required this.startup, this.onTap});
+  const StartupCard({
+    super.key,
+    required this.startup,
+    this.onTap,
+    this.onPlayVideo,
+  });
 
   Color _getStageColor(String stage) {
     switch (stage.toLowerCase().trim()) {
@@ -277,6 +283,19 @@ class StartupCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
+                  if (startup.videoDemo.trim().isNotEmpty) ...[
+                    IconButton(
+                      tooltip: 'Ver video',
+                      onPressed: onPlayVideo,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: _purple600,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
                   const Icon(
                     Icons.chevron_right_rounded,
                     color: _textSecondary,
