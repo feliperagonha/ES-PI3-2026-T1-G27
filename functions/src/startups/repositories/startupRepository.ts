@@ -1,7 +1,46 @@
 import {StartupDocument, StartupListItem} from "../types";
 import {db} from "../shared/firebase";
+import {
+  buildExpiredTokenResetUpdate,
+  buildPendingSoldOutMarkerUpdate,
+  evaluateStartupTokenReset,
+} from "../../shared/startupTokenReset";
 
 const startupsCollection = db.collection("startups");
+
+async function applyExpiredStartupTokenResets(): Promise<void> {
+  const now = new Date();
+  const snapshot = await startupsCollection
+    .where("tokensAvailable", "==", 0)
+    .limit(100)
+    .get();
+
+  if (snapshot.empty) {
+    return;
+  }
+
+  const batch = db.batch();
+  let updates = 0;
+
+  for (const doc of snapshot.docs) {
+    const evaluation = evaluateStartupTokenReset(doc.data(), now);
+
+    if (evaluation.shouldReset) {
+      batch.update(doc.ref, buildExpiredTokenResetUpdate(evaluation));
+      updates++;
+      continue;
+    }
+
+    if (evaluation.shouldMarkSoldOut) {
+      batch.update(doc.ref, buildPendingSoldOutMarkerUpdate(evaluation));
+      updates++;
+    }
+  }
+
+  if (updates > 0) {
+    await batch.commit();
+  }
+}
 
 function toStartupListItem(
   id: string,
@@ -28,6 +67,8 @@ function toStartupListItem(
 }
 
 export async function listStartupItems(): Promise<StartupListItem[]> {
+  await applyExpiredStartupTokenResets();
+
   const snapshot = await startupsCollection
     .where("isActive", "==", true)
     .limit(100)

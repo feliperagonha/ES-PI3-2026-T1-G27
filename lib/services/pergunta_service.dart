@@ -1,167 +1,79 @@
 // Felipe Ragonha
 // RA: 24023900
 
-// Juliano Perusso
-// RA: 24023434
+import 'package:cloud_functions/cloud_functions.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/pergunta_model.dart';
 
-/// Serviço responsável por operações na subcoleção
-/// startups/{startupId}/perguntas
+class PerguntasPrivadasState {
+  final bool isInvestidor;
+  final bool isSocio;
+  final List<Pergunta> perguntas;
+
+  const PerguntasPrivadasState({
+    required this.isInvestidor,
+    required this.isSocio,
+    required this.perguntas,
+  });
+}
+
 class PerguntaService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'southamerica-east1',
+  );
 
-  // ─── Referência à subcoleção ─────────────────────────────────────────────────
+  Future<PerguntasPrivadasState> getPerguntasPrivadas(String startupId) async {
+    final result = await _functions.httpsCallable('listPrivateQuestions').call({
+      'startupId': startupId,
+    });
 
-  CollectionReference<Map<String, dynamic>> _col(String startupId) =>
-      _db.collection('startups').doc(startupId).collection('perguntas');
+    final response = Map<String, dynamic>.from(result.data);
+    final items = List<Map<String, dynamic>>.from(
+      ((response['data'] ?? []) as List).map(
+        (item) => Map<String, dynamic>.from(item),
+      ),
+    );
 
-  // ─── Verificação: usuário é investidor da startup? ────────────────────────────
-  //
-  // Os tokens ficam registrados na coleção "transactions".
-  // Cada doc tem: compradorId/buyerId, vendedorId/sellerId, startupId, quantidade/quantity.
-  // Saldo = Σ compras - Σ vendas. Se saldo > 0 → é investidor ativo.
+    return PerguntasPrivadasState(
+      isInvestidor: response['isInvestor'] == true,
+      isSocio: response['isFounder'] == true,
+      perguntas: items.map((item) {
+        return Pergunta.fromMap(item['id']?.toString() ?? '', item);
+      }).toList(),
+    );
+  }
 
   Future<bool> isInvestidor(String startupId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return false;
-
-    final snap = await _db
-        .collection('transactions')
-        .where('startupId', isEqualTo: startupId)
-        .get();
-
-    int saldo = 0;
-
-    for (final doc in snap.docs) {
-      final data = doc.data();
-      final quantidade = (data['quantidade'] ?? data['quantity'] ?? 0) as num;
-
-      if (quantidade <= 0) continue;
-
-      if (data['compradorId'] == uid || data['buyerId'] == uid) {
-        saldo += quantidade.toInt();
-      }
-
-      if (data['vendedorId'] == uid || data['sellerId'] == uid) {
-        saldo -= quantidade.toInt();
-      }
-    }
-
-    return saldo > 0;
+    return (await getPerguntasPrivadas(startupId)).isInvestidor;
   }
-
-  // ─── Verificação: usuário é sócio (founder) da startup? ──────────────────────
-  //
-  // Verifica o campo "founderUids" (lista de UIDs) no documento da startup.
-  // Adicione esse campo no Firestore com os UIDs dos fundadores de cada startup.
 
   Future<bool> isSocio(String startupId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return false;
-
-    final doc = await _db.collection('startups').doc(startupId).get();
-    if (!doc.exists) return false;
-
-    final data = doc.data();
-    final founderUids = List<String>.from(data?['founderUids'] ?? []);
-    return founderUids.contains(uid);
+    return (await getPerguntasPrivadas(startupId)).isSocio;
   }
 
-  // ─── CRUD de perguntas ────────────────────────────────────────────────────────
+  Future<List<Pergunta>> getPerguntas(String startupId) async {
+    return (await getPerguntasPrivadas(startupId)).perguntas;
+  }
 
-  /// Envia uma nova pergunta (somente investidores com saldo > 0).
   Future<void> enviarPergunta({
     required String startupId,
     required String texto,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não autenticado.');
-
-    final investidor = await isInvestidor(startupId);
-    if (!investidor) {
-      throw Exception(
-        'Acesso negado: apenas investidores desta startup podem enviar perguntas.',
-      );
-    }
-
-    final nome = user.displayName?.trim().isNotEmpty == true
-        ? user.displayName!
-        : user.email ?? 'Investidor';
-
-    await _col(startupId).add({
-      'autorId': user.uid,
-      'autorNome': nome,
-      'texto': texto.trim(),
-      'resposta': null,
-      'respondidoPorId': null,
-      'respondidoPorNome': null,
-      'status': 'pendente',
-      'criadoEm': FieldValue.serverTimestamp(),
-      'respondidoEm': null,
+    await _functions.httpsCallable('createPrivateQuestion').call({
+      'startupId': startupId,
+      'texto': texto,
     });
   }
 
-  /// Busca as perguntas visíveis para o usuário atual:
-  /// - Sócio      → todas as perguntas da startup
-  /// - Investidor → apenas as suas próprias perguntas
-  /// - Outros     → lista vazia
-  Future<List<Pergunta>> getPerguntas(String startupId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return [];
-
-    final socio = await isSocio(startupId);
-
-    QuerySnapshot<Map<String, dynamic>> snapshot;
-
-    if (socio) {
-      snapshot = await _col(startupId).get();
-    } else {
-      final investidor = await isInvestidor(startupId);
-      if (!investidor) return [];
-
-      snapshot = await _col(startupId).where('autorId', isEqualTo: uid).get();
-    }
-
-    // 1. Transforma os documentos do Firebase em uma lista do Flutter
-    final listaPerguntas = snapshot.docs.map(Pergunta.fromDoc).toList();
-
-    // 2. Ordena essa lista na memória (Mais recente primeiro)
-    listaPerguntas.sort((a, b) => b.criadoEm.compareTo(a.criadoEm));
-
-    // 3. Retorna a lista perfeitamente organizada
-    return listaPerguntas;
-  }
-
-  /// Responde a uma pergunta (somente sócios).
   Future<void> responderPergunta({
     required String startupId,
     required String perguntaId,
     required String resposta,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não autenticado.');
-
-    final socio = await isSocio(startupId);
-    if (!socio) {
-      throw Exception(
-        'Acesso negado: apenas sócios podem responder perguntas.',
-      );
-    }
-
-    final nome = user.displayName?.trim().isNotEmpty == true
-        ? user.displayName!
-        : user.email ?? 'Sócio';
-
-    await _col(startupId).doc(perguntaId).update({
-      'resposta': resposta.trim(),
-      'respondidoPorId': user.uid,
-      'respondidoPorNome': nome,
-      'status': 'respondida',
-      'respondidoEm': FieldValue.serverTimestamp(),
+    await _functions.httpsCallable('answerPrivateQuestion').call({
+      'startupId': startupId,
+      'perguntaId': perguntaId,
+      'resposta': resposta,
     });
   }
 }

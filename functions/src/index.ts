@@ -3,7 +3,12 @@
 
 import {setGlobalOptions} from "firebase-functions/v2/options";
 
-setGlobalOptions({maxInstances: 1});
+setGlobalOptions({
+  maxInstances: 1,
+  memory: "256MiB",
+  cpu: "gcf_gen1",
+  concurrency: 1,
+});
 
 // Exporta todos os módulos
 export * from "./authentication";

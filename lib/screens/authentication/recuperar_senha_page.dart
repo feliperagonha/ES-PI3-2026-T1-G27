@@ -148,8 +148,8 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
                   const SizedBox(height: 24),
 
                   SizedBox(
-                    width: double.infinity,
-                    height: 46,
+                    width: 160,
+                    height: 42,
                     child: ElevatedButton(
                       onPressed: carregando ? null : recuperarSenha,
                       style: ElevatedButton.styleFrom(

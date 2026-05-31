@@ -1,7 +1,6 @@
 // Felipe Ragonha
 // RA: 24023900
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Status possíveis de uma pergunta
@@ -48,8 +47,12 @@ class Pergunta {
   factory Pergunta.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
+    return Pergunta.fromMap(doc.id, data);
+  }
+
+  factory Pergunta.fromMap(String id, Map<String, dynamic> data) {
     return Pergunta(
-      id: doc.id,
+      id: id,
       autorId: data['autorId'] as String? ?? '',
       autorNome: data['autorNome'] as String? ?? 'Investidor',
       texto: data['texto'] as String? ?? '',
@@ -59,9 +62,21 @@ class Pergunta {
       status: (data['status'] as String?) == 'respondida'
           ? PerguntaStatus.respondida
           : PerguntaStatus.pendente,
-      criadoEm: (data['criadoEm'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      respondidoEm: (data['respondidoEm'] as Timestamp?)?.toDate(),
+      criadoEm: _parseDate(data['criadoEm']) ?? DateTime.now(),
+      respondidoEm: _parseDate(data['respondidoEm']),
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value)?.toLocal();
+    }
+
+    return null;
   }
 
   Map<String, dynamic> toMap() {

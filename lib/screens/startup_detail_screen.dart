@@ -136,21 +136,16 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
 
   Future<void> _verificarAcessoECarregarPerguntas() async {
     try {
-      final investidor = await _perguntaService.isInvestidor(s.id);
-      final socio = await _perguntaService.isSocio(s.id);
+      final state = await _perguntaService.getPerguntasPrivadas(s.id);
 
       if (!mounted) return;
       setState(() {
-        _isInvestidor = investidor;
-        _isSocio = socio;
+        _isInvestidor = state.isInvestidor;
+        _isSocio = state.isSocio;
+        _perguntas = state.perguntas;
         _verificandoAcesso = false;
+        _carregandoPerguntas = false;
       });
-
-      if (investidor || socio) {
-        await _carregarPerguntas();
-      } else {
-        if (mounted) setState(() => _carregandoPerguntas = false);
-      }
     } catch (e, stack) {
       // AGORA O BUG APARECE NO CONSOLE
       debugPrint('ERRO EM _verificarAcessoECarregarPerguntas: $e');
@@ -167,10 +162,12 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     if (!mounted) return;
     setState(() => _carregandoPerguntas = true);
     try {
-      final perguntas = await _perguntaService.getPerguntas(s.id);
+      final state = await _perguntaService.getPerguntasPrivadas(s.id);
       if (!mounted) return;
       setState(() {
-        _perguntas = perguntas;
+        _isInvestidor = state.isInvestidor;
+        _isSocio = state.isSocio;
+        _perguntas = state.perguntas;
         _carregandoPerguntas = false;
       });
     } catch (e, stack) {

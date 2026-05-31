@@ -3,6 +3,11 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../shared/firebase";
 import {BuyStartupTokenParams, BuyStartupTokenResult} from "../types";
 import {persistTokenValuation} from "./persistTokenValuation";
+import {
+  buildExpiredTokenResetUpdate,
+  buildSoldOutTokenUpdate,
+  evaluateStartupTokenReset,
+} from "../../shared/startupTokenReset";
 
 export async function buyStartupTokenTransaction(
   params: BuyStartupTokenParams
@@ -44,7 +49,8 @@ export async function buyStartupTokenTransaction(
     const stage = startup.stage as string | undefined;
 
     const currentPrice = Number(startup.currentPrice ?? 0);
-    const tokensAvailable = Number(startup.tokensAvailable ?? 0);
+    const tokenResetEvaluation = evaluateStartupTokenReset(startup);
+    const tokensAvailable = tokenResetEvaluation.tokensAvailable;
     const balance = Number(wallet?.balance ?? 0);
 
     if (!startupName) {
@@ -93,16 +99,31 @@ export async function buyStartupTokenTransaction(
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    transaction.update(startupRef, {
+    const nextTokensAvailable = tokensAvailable - quantity;
+    const startupUpdate = {
       currentPrice: valuation.currentPrice,
       lastValuationDate: valuation.date,
       lastVariationPercent: valuation.variationPercent,
       lastTradePrice: currentPrice,
       lastTradeAt: FieldValue.serverTimestamp(),
-      tokensAvailable: FieldValue.increment(-quantity),
+      tokensAvailable: nextTokensAvailable,
       totalInvested: FieldValue.increment(totalValue),
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (tokenResetEvaluation.shouldReset) {
+      Object.assign(
+        startupUpdate,
+        buildExpiredTokenResetUpdate(tokenResetEvaluation),
+        {tokensAvailable: nextTokensAvailable}
+      );
+    }
+
+    if (nextTokensAvailable === 0) {
+      Object.assign(startupUpdate, buildSoldOutTokenUpdate());
+    }
+
+    transaction.update(startupRef, startupUpdate);
 
     transaction.set(transactionRef, {
       type: "buy_startup_token",
