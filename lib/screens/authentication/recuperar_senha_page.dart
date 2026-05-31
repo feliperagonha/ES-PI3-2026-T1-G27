@@ -94,7 +94,10 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const MesclaBrandLogo(width: 260),
+                  const MesclaBrandLogo(
+                    width: 168,
+                    assetPath: 'assets/branding/mescla_mark.png',
+                  ),
 
                   const SizedBox(height: 18),
 
@@ -173,13 +176,24 @@ class _RecuperarSenhaPageState extends State<RecuperarSenhaPage> {
 
                   const SizedBox(height: 12),
 
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      'Voltar',
-                      style: TextStyle(color: Color(0xFFB8A7FF), fontSize: 12),
+                  SizedBox(
+                    width: 160,
+                    height: 42,
+                    child: ElevatedButton(
+                      onPressed: carregando
+                          ? null
+                          : () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6A4CFF),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      child: const Text(
+                        'Voltar',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
