@@ -32,9 +32,12 @@ export type StartupListItem = {
   capitalInvested: number;
   totalTokens: number;
   tokensAvailable: number;
+  initialPrice: number;
   currentPrice: number;
+  totalInvested: number;
   status: string;
   isActive: boolean;
+  founders: Founder[];
   mentors: string[];
   videoDemo: string;
 };

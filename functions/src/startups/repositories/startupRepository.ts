@@ -16,9 +16,12 @@ function toStartupListItem(
     capitalInvested: startup.capitalInvested,
     totalTokens: startup.totalTokens,
     tokensAvailable: startup.tokensAvailable,
+    initialPrice: startup.initialPrice,
     currentPrice: startup.currentPrice,
+    totalInvested: startup.totalInvested,
     status: startup.status,
     isActive: startup.isActive,
+    founders: startup.founders ?? [],
     mentors: startup.mentors ?? [],
     videoDemo: startup.videoDemo,
   };
