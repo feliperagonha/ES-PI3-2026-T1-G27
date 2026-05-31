@@ -9,14 +9,12 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../models/startup.dart';
 import '../repositories/startup_repository.dart';
 import '../services/mercado_service.dart';
+import 'startup_detail_screen.dart';
 
 class VenderTokenScreen extends StatefulWidget {
   final String userId;
 
-  const VenderTokenScreen({
-    super.key,
-    required this.userId,
-  });
+  const VenderTokenScreen({super.key, required this.userId});
 
   @override
   State<VenderTokenScreen> createState() => _VenderTokenScreenState();
@@ -69,7 +67,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
 
       final positions = List<Map<String, dynamic>>.from(
         (response['data'] as List).map(
-              (item) => Map<String, dynamic>.from(item),
+          (item) => Map<String, dynamic>.from(item),
         ),
       );
 
@@ -84,8 +82,8 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
         return;
       }
 
-      final availableQuantity =
-      (position.first['availableQuantity'] ?? 0).toInt();
+      final availableQuantity = (position.first['availableQuantity'] ?? 0)
+          .toInt();
 
       setState(() {
         _saldoDisponivel = availableQuantity;
@@ -119,9 +117,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
       _precoController.text.trim().replaceAll(',', '.'),
     );
 
-    final quantidade = int.tryParse(
-      _quantidadeController.text.trim(),
-    );
+    final quantidade = int.tryParse(_quantidadeController.text.trim());
 
     if (preco == null || preco <= 0) {
       _snack('Digite um preço válido.');
@@ -136,7 +132,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
     if (quantidade > _saldoDisponivel) {
       _snack(
         'Quantidade maior que seu saldo disponível '
-            '($_saldoDisponivel tokens).',
+        '($_saldoDisponivel tokens).',
       );
       return;
     }
@@ -146,14 +142,12 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Confirmar venda'),
         content: Text(
           'Colocar $quantidade token${quantidade > 1 ? 's' : ''} '
-              'de ${startup.name} à venda por R\$ ${preco.toStringAsFixed(2)} cada?\n\n'
-              'Total: R\$ ${(preco * quantidade).toStringAsFixed(2)}',
+          'de ${startup.name} à venda por R\$ ${preco.toStringAsFixed(2)} cada?\n\n'
+          'Total: R\$ ${(preco * quantidade).toStringAsFixed(2)}',
         ),
         actions: [
           TextButton(
@@ -195,10 +189,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
 
       if (!mounted) return;
 
-      _snack(
-        'Token colocado à venda com sucesso!',
-        success: true,
-      );
+      _snack('Token colocado à venda com sucesso!', success: true);
 
       Navigator.pop(context, true);
     } on FirebaseFunctionsException catch (e) {
@@ -223,6 +214,24 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
     );
   }
 
+  Future<void> _irParaCompraDaStartup() async {
+    final startup = _startupSelecionada;
+    if (startup == null) {
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => StartupDetailScreen(startup: startup)),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _carregarSaldo(startup.id);
+  }
+
   Widget _buildStartupList() {
     return FutureBuilder<List<Startup>>(
       future: _startupsFuture,
@@ -231,9 +240,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(
-                color: Color(0xFF6A4CFF),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF6A4CFF)),
             ),
           );
         }
@@ -361,10 +368,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
       children: [
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: _saldoDisponivel > 0
                 ? const Color(0xFFEDE7FF)
@@ -375,20 +379,20 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
             children: [
               _carregandoSaldo
                   ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF6A4CFF),
-                ),
-              )
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF6A4CFF),
+                      ),
+                    )
                   : Icon(
-                Icons.token_rounded,
-                size: 16,
-                color: _saldoDisponivel > 0
-                    ? const Color(0xFF6A4CFF)
-                    : Colors.red,
-              ),
+                      Icons.token_rounded,
+                      size: 16,
+                      color: _saldoDisponivel > 0
+                          ? const Color(0xFF6A4CFF)
+                          : Colors.red,
+                    ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -411,19 +415,38 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
             ],
           ),
         ),
+        if (!_carregandoSaldo && _saldoDisponivel == 0) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: _irParaCompraDaStartup,
+              icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 18),
+              label: const Text(
+                'Comprar tokens desta startup',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF6A4CFF),
+                side: const BorderSide(color: Color(0xFF6A4CFF)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
       ],
     );
   }
 
   Widget _buildTotalPreview() {
-    final preco = double.tryParse(
-      _precoController.text.replaceAll(',', '.'),
-    );
+    final preco = double.tryParse(_precoController.text.replaceAll(',', '.'));
 
-    final quantidade = int.tryParse(
-      _quantidadeController.text,
-    );
+    final quantidade = int.tryParse(_quantidadeController.text);
 
     if (preco == null || quantidade == null || preco <= 0 || quantidade <= 0) {
       return const SizedBox.shrink();
@@ -442,10 +465,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
             const Expanded(
               child: Text(
                 'Total da oferta',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               ),
             ),
             Text(
@@ -464,7 +484,8 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final podeEnviar = !_enviando &&
+    final podeEnviar =
+        !_enviando &&
         !_carregandoSaldo &&
         _startupSelecionada != null &&
         _saldoDisponivel > 0;
@@ -476,10 +497,7 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
         foregroundColor: Colors.white,
         title: const Text(
           'Vender Token',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
         elevation: 0,
@@ -535,21 +553,21 @@ class _VenderTokenScreenState extends State<VenderTokenScreen> {
                 ),
                 label: _enviando
                     ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text(
-                  'Colocar à venda',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
+                        'Colocar à venda',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6A4CFF),
                   disabledBackgroundColor: Colors.grey.shade300,
@@ -609,10 +627,7 @@ class _InputField extends StatelessWidget {
       enabled: enabled,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
-          color: Colors.black38,
-          fontSize: 14,
-        ),
+        hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
         filled: true,
         fillColor: enabled ? Colors.white : Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(
@@ -625,10 +640,7 @@ class _InputField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(
-            color: Color(0xFF6A4CFF),
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF6A4CFF), width: 1.5),
         ),
       ),
     );

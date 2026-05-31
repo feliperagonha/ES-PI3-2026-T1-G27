@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../models/startup.dart';
 import '../services/startup_service.dart';
 import '../widgets/startup_card.dart';
+import '../widgets/startup_video_player.dart';
 import 'startup_detail_screen.dart';
 import 'profile_screen.dart';
 
@@ -102,6 +103,16 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
+  void _openStartupVideo(Startup startup) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => StartupVideoDialog(
+        startupName: startup.name,
+        videoPath: startup.videoDemo,
+      ),
     );
   }
 
@@ -245,6 +256,7 @@ class _CatalogoStartupsScreenState extends State<CatalogoStartupsScreen> {
                   ...startupsFiltradas.map(
                     (startup) => StartupCard(
                       startup: startup,
+                      onPlayVideo: () => _openStartupVideo(startup),
                       onTap: () {
                         Navigator.push(
                           context,
