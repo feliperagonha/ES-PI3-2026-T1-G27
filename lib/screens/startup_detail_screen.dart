@@ -251,7 +251,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     }
   }
 
-  Future<void> _abrirDialogResposta(Pergunta pergunta) async {
+  Future<void> _abrirDialogResposta(
+    Pergunta pergunta, {
+    bool publica = false,
+  }) async {
     final ctrl = TextEditingController();
 
     final confirmou = await showDialog<bool>(
@@ -338,13 +341,25 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     if (resposta.isEmpty) return;
 
     try {
-      await _perguntaService.responderPergunta(
-        startupId: s.id,
-        perguntaId: pergunta.id,
-        resposta: resposta,
-      );
+      if (publica) {
+        await _publicPerguntaService.responderPergunta(
+          startupId: s.id,
+          perguntaId: pergunta.id,
+          resposta: resposta,
+        );
+      } else {
+        await _perguntaService.responderPergunta(
+          startupId: s.id,
+          perguntaId: pergunta.id,
+          resposta: resposta,
+        );
+      }
       _snack('Resposta enviada!', success: true);
-      await _carregarPerguntas();
+      if (publica) {
+        await _carregarPerguntasPublicas();
+      } else {
+        await _carregarPerguntas();
+      }
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));
     }
@@ -602,7 +617,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
         else
           Column(
             children: _perguntasPublicas
-                .map((p) => _buildPerguntaCard(p))
+                .map((p) => _buildPerguntaCard(p, publica: true))
                 .toList(),
           ),
       ],
@@ -936,7 +951,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     );
   }
 
-  Widget _buildPerguntaCard(Pergunta pergunta) {
+  Widget _buildPerguntaCard(Pergunta pergunta, {bool publica = false}) {
     final respondida = pergunta.status == PerguntaStatus.respondida;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final ehAutor = pergunta.autorId == uid;
@@ -1142,7 +1157,8 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
                 width: double.infinity,
                 height: 38,
                 child: OutlinedButton.icon(
-                  onPressed: () => _abrirDialogResposta(pergunta),
+                  onPressed: () =>
+                      _abrirDialogResposta(pergunta, publica: publica),
                   icon: const Icon(
                     Icons.reply_rounded,
                     size: 16,

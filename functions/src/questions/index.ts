@@ -23,6 +23,8 @@ type PrivateQuestionItem = {
   respondidoEm: string | null;
 };
 
+type QuestionVisibility = "publica" | "privada";
+
 function requireAuthUid(request: {auth?: {uid?: string}}): string {
   const uid = request.auth?.uid;
 
@@ -188,6 +190,121 @@ function privateQuestionsCollection(startupId: string) {
     .collection("perguntas_privadas");
 }
 
+function publicQuestionsCollection(startupId: string) {
+  return db
+    .collection("startups")
+    .doc(startupId)
+    .collection("perguntas_publicas");
+}
+
+async function answerQuestion(params: {
+  startupId: string;
+  questionId: string;
+  uid: string;
+  resposta: string;
+  visibility: QuestionVisibility;
+}) {
+  if (!(await isFounder(params.startupId, params.uid))) {
+    throw new HttpsError(
+      "permission-denied",
+      "Apenas socios desta startup podem responder perguntas."
+    );
+  }
+
+  const collection = params.visibility === "publica" ?
+    publicQuestionsCollection(params.startupId) :
+    privateQuestionsCollection(params.startupId);
+  const questionRef = collection.doc(params.questionId);
+  const questionSnap = await questionRef.get();
+
+  if (!questionSnap.exists) {
+    throw new HttpsError("not-found", "Pergunta nao encontrada.");
+  }
+
+  const respondidoPorNome = await getDisplayName(params.uid, "Socio");
+
+  await questionRef.update({
+    resposta: params.resposta,
+    respondidoPorId: params.uid,
+    respondidoPorNome,
+    status: "respondida",
+    respondidoEm: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+export const listPublicQuestions = onCall(
+  {region: "southamerica-east1"},
+  async (request) => {
+    const startupId = requireStartupId(request.data);
+    await getStartup(startupId);
+
+    const snapshot = await publicQuestionsCollection(startupId).get();
+    const data = snapshot.docs
+      .map(toQuestionItem)
+      .sort((a, b) => (b.criadoEm ?? "").localeCompare(a.criadoEm ?? ""));
+
+    return {
+      success: true,
+      data,
+    };
+  }
+);
+
+export const createPublicQuestion = onCall(
+  {region: "southamerica-east1"},
+  async (request) => {
+    const uid = requireAuthUid(request);
+    const startupId = requireStartupId(request.data);
+    const texto = requireText(request.data);
+
+    await getStartup(startupId);
+
+    const autorNome = await getDisplayName(uid, "Usuario");
+    const questionRef = publicQuestionsCollection(startupId).doc();
+
+    await questionRef.set({
+      autorId: uid,
+      autorNome,
+      texto,
+      resposta: null,
+      respondidoPorId: null,
+      respondidoPorNome: null,
+      status: "pendente",
+      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      respondidoEm: null,
+    });
+
+    return {
+      success: true,
+      perguntaId: questionRef.id,
+      message: "Pergunta publica enviada com sucesso.",
+    };
+  }
+);
+
+export const answerPublicQuestion = onCall(
+  {region: "southamerica-east1"},
+  async (request) => {
+    const uid = requireAuthUid(request);
+    const startupId = requireStartupId(request.data);
+    const perguntaId = requireQuestionId(request.data);
+    const resposta = requireText(request.data);
+
+    await answerQuestion({
+      startupId,
+      questionId: perguntaId,
+      uid,
+      resposta,
+      visibility: "publica",
+    });
+
+    return {
+      success: true,
+      message: "Resposta enviada com sucesso.",
+    };
+  }
+);
+
 export const listPrivateQuestions = onCall(
   {region: "southamerica-east1"},
   async (request) => {
@@ -271,28 +388,12 @@ export const answerPrivateQuestion = onCall(
     const perguntaId = requireQuestionId(request.data);
     const resposta = requireText(request.data);
 
-    if (!(await isFounder(startupId, uid))) {
-      throw new HttpsError(
-        "permission-denied",
-        "Apenas socios desta startup podem responder perguntas."
-      );
-    }
-
-    const questionRef = privateQuestionsCollection(startupId).doc(perguntaId);
-    const questionSnap = await questionRef.get();
-
-    if (!questionSnap.exists) {
-      throw new HttpsError("not-found", "Pergunta nao encontrada.");
-    }
-
-    const respondidoPorNome = await getDisplayName(uid, "Socio");
-
-    await questionRef.update({
+    await answerQuestion({
+      startupId,
+      questionId: perguntaId,
+      uid,
       resposta,
-      respondidoPorId: uid,
-      respondidoPorNome,
-      status: "respondida",
-      respondidoEm: admin.firestore.FieldValue.serverTimestamp(),
+      visibility: "privada",
     });
 
     return {
