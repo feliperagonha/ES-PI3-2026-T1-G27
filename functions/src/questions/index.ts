@@ -3,6 +3,13 @@
 
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {
+  normalizeString,
+  requireAuthUid,
+  requireQuestionId,
+  requireQuestionText,
+  requireStartupId,
+} from "../shared/validation";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -24,66 +31,6 @@ type PrivateQuestionItem = {
 };
 
 type QuestionVisibility = "publica" | "privada";
-
-function requireAuthUid(request: {auth?: {uid?: string}}): string {
-  const uid = request.auth?.uid;
-
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Usuario nao autenticado.");
-  }
-
-  return uid;
-}
-
-function normalizeString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function requireStartupId(data: unknown): string {
-  const payload = (data ?? {}) as {startupId?: unknown};
-  const startupId = normalizeString(payload.startupId);
-
-  if (!startupId) {
-    throw new HttpsError("invalid-argument", "startupId obrigatorio.");
-  }
-
-  return startupId;
-}
-
-function requireText(data: unknown): string {
-  const payload = (data ?? {}) as {
-    texto?: unknown;
-    question?: unknown;
-    resposta?: unknown;
-  };
-  const text = normalizeString(
-    payload.texto ?? payload.question ?? payload.resposta
-  );
-
-  if (!text) {
-    throw new HttpsError("invalid-argument", "Texto obrigatorio.");
-  }
-
-  if (text.length > 500) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Texto deve ter no maximo 500 caracteres."
-    );
-  }
-
-  return text;
-}
-
-function requireQuestionId(data: unknown): string {
-  const payload = (data ?? {}) as {perguntaId?: unknown; questionId?: unknown};
-  const questionId = normalizeString(payload.perguntaId ?? payload.questionId);
-
-  if (!questionId) {
-    throw new HttpsError("invalid-argument", "perguntaId obrigatorio.");
-  }
-
-  return questionId;
-}
 
 function toIsoString(value: unknown): string | null {
   const timestamp = value as {toDate?: () => Date} | undefined;
@@ -255,7 +202,7 @@ export const createPublicQuestion = onCall(
   async (request) => {
     const uid = requireAuthUid(request);
     const startupId = requireStartupId(request.data);
-    const texto = requireText(request.data);
+    const texto = requireQuestionText(request.data);
 
     await getStartup(startupId);
 
@@ -288,7 +235,7 @@ export const answerPublicQuestion = onCall(
     const uid = requireAuthUid(request);
     const startupId = requireStartupId(request.data);
     const perguntaId = requireQuestionId(request.data);
-    const resposta = requireText(request.data);
+    const resposta = requireQuestionText(request.data);
 
     await answerQuestion({
       startupId,
@@ -348,7 +295,7 @@ export const createPrivateQuestion = onCall(
   async (request) => {
     const uid = requireAuthUid(request);
     const startupId = requireStartupId(request.data);
-    const texto = requireText(request.data);
+    const texto = requireQuestionText(request.data);
 
     if (!(await isInvestor(startupId, uid))) {
       throw new HttpsError(
@@ -386,7 +333,7 @@ export const answerPrivateQuestion = onCall(
     const uid = requireAuthUid(request);
     const startupId = requireStartupId(request.data);
     const perguntaId = requireQuestionId(request.data);
-    const resposta = requireText(request.data);
+    const resposta = requireQuestionText(request.data);
 
     await answerQuestion({
       startupId,

@@ -203,7 +203,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
     debugPrint('BOTÃO CLICADO! O texto digitado é: "${_perguntaCtrl.text}"');
 
     final texto = _perguntaCtrl.text.trim();
-    if (texto.isEmpty) return;
+    if (texto.isEmpty) {
+      _snack('Digite o texto da pergunta.');
+      return;
+    }
 
     setState(() => _enviandoPergunta = true);
     try {
@@ -225,7 +228,10 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
   Future<void> _enviarPerguntaPublica() async {
     final texto = _perguntaPublicaCtrl.text.trim();
 
-    if (texto.isEmpty) return;
+    if (texto.isEmpty) {
+      _snack('Digite o texto da pergunta.');
+      return;
+    }
 
     setState(() => _enviandoPerguntaPublica = true);
 
