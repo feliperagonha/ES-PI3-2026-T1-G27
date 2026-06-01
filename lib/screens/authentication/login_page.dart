@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
             'password': passwordController.text.trim(),
           })
           .timeout(
-            const Duration(seconds: 20),
+            const Duration(seconds: 45),
             onTimeout: () {
               throw Exception(
                 'Tempo esgotado no login. Verifique a conexao e tente novamente.',
