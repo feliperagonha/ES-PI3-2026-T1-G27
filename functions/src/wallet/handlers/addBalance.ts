@@ -1,21 +1,20 @@
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {FieldValue} from "firebase-admin/firestore";
-import {db} from "../shared/firebase";
+import {addBalanceToWallet} from "../repositories/walletRepository";
 
 const maxAddBalanceAmount = 1000000;
 
 export const addBalance = onCall(
   {region: "southamerica-east1"},
-  async (request) => {
-    if (!request.auth) {
+  async (call) => {
+    if (!call.auth) {
       throw new HttpsError(
         "unauthenticated",
         "Usuario precisa estar logado."
       );
     }
 
-    const uid = request.auth.uid;
-    const amount = Number(request.data?.amount);
+    const uid = call.auth.uid;
+    const amount = Number(call.data?.amount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new HttpsError(
@@ -31,18 +30,7 @@ export const addBalance = onCall(
       );
     }
 
-    const walletRef = db.collection("wallets").doc(uid);
-
-    await walletRef.set(
-      {
-        userId: uid,
-        balance: FieldValue.increment(amount),
-        reservedBalance: FieldValue.increment(0),
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      {merge: true}
-    );
+    await addBalanceToWallet(uid, amount);
 
     return {
       success: true,

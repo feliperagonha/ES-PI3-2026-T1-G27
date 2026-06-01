@@ -6,51 +6,20 @@
 //RA: 24023434
 
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
-
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const db = admin.firestore();
+import {fetchOrCreateWallet} from "../repositories/walletRepository";
 
 export const fetchWallet = onCall(
   {region: "southamerica-east1"},
-  async (request) => {
-    if (!request.auth) {
+  async (call) => {
+    if (!call.auth) {
       throw new HttpsError(
         "unauthenticated",
         "Usuário não logado."
       );
     }
 
-    const uid = request.auth.uid;
+    const uid = call.auth.uid;
 
-    const walletRef = db.collection("wallets").doc(uid);
-    const walletSnap = await walletRef.get();
-
-    if (!walletSnap.exists) {
-      await walletRef.set({
-        userId: uid,
-        balance: 10000,
-        reservedBalance: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      return {
-        userId: uid,
-        balance: 10000,
-        reservedBalance: 0,
-      };
-    }
-
-    const walletData = walletSnap.data() ?? {};
-
-    return {
-      userId: uid,
-      balance: walletData.balance ?? 0,
-      reservedBalance: walletData.reservedBalance ?? 0,
-    };
+    return fetchOrCreateWallet(uid);
   }
 );
