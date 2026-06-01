@@ -1083,7 +1083,7 @@ class _StartupDetailScreenState extends State<StartupDetailScreen>
             ),
 
             // Resposta (visível para o autor ou sócios)
-            if (respondida && (ehAutor || _isSocio)) ...[
+            if (respondida && (publica || ehAutor || _isSocio)) ...[
               const SizedBox(height: 10),
               const Divider(color: _divider, height: 1),
               const SizedBox(height: 10),
