@@ -497,7 +497,7 @@ class _TokenDashboardScreenState extends State<TokenDashboardScreen> {
                           child: Column(
                             children: [
                               _InfoLine(
-                                label: 'Tokens totais',
+                                label: 'Tokens na carteira',
                                 value: '${selected.quantity}',
                               ),
                               const Divider(height: 20),
