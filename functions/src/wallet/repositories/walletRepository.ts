@@ -25,7 +25,7 @@ export async function fetchOrCreateWallet(uid: string): Promise<WalletData> {
   if (!walletSnap.exists) {
     const wallet = {
       userId: uid,
-      balance: 10000,
+      balance: 0,
       reservedBalance: 0,
     };
 

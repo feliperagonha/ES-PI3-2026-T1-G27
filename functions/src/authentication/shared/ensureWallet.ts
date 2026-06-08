@@ -13,7 +13,7 @@ export async function ensureWallet(uid: string): Promise<void> {
   if (!walletSnap.exists) {
     await walletRef.set({
       userId: uid,
-      balance: 10000,
+      balance: 0,
       reservedBalance: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
